@@ -1,0 +1,211 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  background: linear-gradient(135deg, #f5ede3 0%, #faf7f2 100%);
+  color: #5a5550;
+  line-height: 1.6;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background: linear-gradient(135deg, #D4A574 0%, #c48b4f 100%);
+  color: white;
+  padding: 3rem 1rem;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.header p {
+  font-size: 1.1rem;
+  opacity: 0.95;
+}
+
+.stage {
+  flex: 1;
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+}
+
+.stage h2 {
+  color: #D4A574;
+  margin-bottom: 1.5rem;
+  font-size: 1.8rem;
+}
+
+.stage input,
+.stage select,
+.stage textarea {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.stage input:focus,
+.stage select:focus,
+.stage textarea:focus {
+  outline: none;
+  border-color: #D4A574;
+  box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+}
+
+.stage label {
+  display: block;
+  margin-bottom: 1rem;
+  font-weight: 500;
+  color: #3d3a34;
+}
+
+.traveler-form {
+  padding: 1rem;
+  background: #f9f7f4;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.traveler-form input {
+  margin-bottom: 0.5rem;
+}
+
+.stage button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #D4A574;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.stage button:hover:not(:disabled) {
+  background: #c48b4f;
+}
+
+.stage button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  background: #fee;
+  color: #c00;
+  padding: 1rem;
+  margin: 1rem;
+  border-radius: 4px;
+  border-left: 4px solid #c00;
+}
+
+/* Itinerary Styles */
+.itinerary {
+  max-width: 900px;
+}
+
+.destination {
+  color: #D4A574;
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  font-style: italic;
+}
+
+.day {
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 2px solid #f0ede8;
+}
+
+.day h3 {
+  color: #3d3a34;
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+}
+
+.activity {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f9f7f4;
+  border-radius: 4px;
+  border-left: 4px solid #D4A574;
+}
+
+.time {
+  font-weight: 600;
+  color: #D4A574;
+  min-width: 100px;
+  font-size: 0.9rem;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-content strong {
+  color: #3d3a34;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.activity-content p {
+  color: #5a5550;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.activity-content small {
+  color: #999;
+  display: block;
+}
+
+.footer {
+  background: #3d3a34;
+  color: white;
+  text-align: center;
+  padding: 1.5rem;
+  margin-top: auto;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 600px) {
+  .stage {
+    margin: 1rem;
+    padding: 1rem;
+  }
+
+  .header h1 {
+    font-size: 1.8rem;
+  }
+
+  .activity {
+    flex-direction: column;
+  }
+
+  .time {
+    min-width: auto;
+  }
+}
