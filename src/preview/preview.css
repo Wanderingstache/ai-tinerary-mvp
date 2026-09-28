@@ -1,0 +1,8 @@
+/* The thin strip across the top of the preview. It is not part of the real site. */
+.pvbar { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; align-items: center;
+  background: #3a3113; color: #f1e8d6; font: 600 13px/1.4 'Josefin Sans', sans-serif; padding: 8px 16px; }
+.pvbar code { background: rgba(241, 232, 214, 0.18); padding: 1px 6px; border-radius: 4px; font: inherit; letter-spacing: 0.04em; }
+.pvbar__links { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.pvbar a { color: #f1e8d6; }
+.pvbar button { font: inherit; color: #3a3113; background: #f1e8d6; border: 0; border-radius: 999px; padding: 3px 12px; cursor: pointer; }
+.pvbar a:focus-visible, .pvbar button:focus-visible { outline: 3px solid #b8955f; outline-offset: 2px; }

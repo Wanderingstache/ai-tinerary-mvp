@@ -1,33 +1,26 @@
 {
-  "name": "ai-tinerary-mvp-frontend",
+  "name": "ai-tinerary",
   "version": "1.0.0",
   "private": true,
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1"
-  },
+  "description": "ai-tinerary.com: intake + itinerary generation for Wandering Mustache",
+  "type": "module",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "build": "vite build",
+    "start": "node server/index.js",
+    "dev:web": "vite",
+    "dev:server": "node --watch server/index.js",
+    "preview:build": "vite build --config vite.preview.config.js && node scripts/inline-preview.mjs"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app"
-    ]
+  "engines": {
+    "node": ">=22.12"
   },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "express": "^4.21.2",
+    "pg": "^8.13.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^8.3.1"
   }
 }

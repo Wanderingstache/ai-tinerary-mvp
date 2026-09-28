@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="How the travel industry changed, why most travel agents are no longer the specialists they used to be, and who is really to blame.">
+    <link rel="icon" href="/favicon.png">
+    <link rel="stylesheet" href="/brand.css">
+    <title>ai-tinerary | The Truth About Travel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5ede3 0%, #faf7f2 100%);
+            color: #3d3a34;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+        
+        .nav {
+            text-align: center;
+            padding: 24px 0;
+            font-family: Merriweather, Georgia, serif;
+            border-bottom: 1px solid rgba(212, 165, 116, 0.2);
+        }
+        
+        .nav a {
+            color: #d4a574;
+            text-decoration: none;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            margin: 0 16px;
+            border-bottom: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .nav a:hover {
+            border-bottom-color: #d4a574;
+        }
+        
+        .nav a.active {
+            color: #3d3a34;
+            border-bottom: 1px solid #3d3a34;
+        }
+        
+        header {
+            text-align: center;
+            padding: 60px 0 40px;
+        }
+        
+        h1 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 56px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #2a2622;
+            line-height: 1.15;
+            letter-spacing: -0.5px;
+        }
+        
+        .subtitle {
+            font-family: Merriweather, Georgia, serif;
+            font-size: 18px;
+            color: #666;
+            font-style: italic;
+            margin-bottom: 48px;
+            font-weight: 400;
+        }
+        
+        .divider {
+            width: 80px;
+            height: 1px;
+            background: #d4a574;
+            margin: 0 auto 48px;
+        }
+        
+        .intro-text {
+            font-family: Merriweather, Georgia, serif;
+            font-size: 18px;
+            line-height: 1.8;
+            margin-bottom: 60px;
+            max-width: 780px;
+            margin-left: auto;
+            margin-right: auto;
+            color: #4a4640;
+        }
+        
+        .intro-text strong {
+            color: #2a2622;
+            font-weight: 700;
+        }
+        
+        .section {
+            margin: 80px 0;
+            padding: 60px 40px;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(212, 165, 116, 0.3);
+            position: relative;
+        }
+        
+        .section::before {
+            content: '✦';
+            position: absolute;
+            top: -28px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            color: #d4a574;
+        }
+        
+        .section h2 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 32px;
+            color: #2a2622;
+            line-height: 1.2;
+        }
+        
+        .section-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 32px;
+        }
+        
+        .truth-block {
+            border-left: 4px solid #d4a574;
+            padding-left: 24px;
+        }
+        
+        .truth-block h3 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: #3d3a34;
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+        
+        .truth-block p {
+            font-family: Merriweather, Georgia, serif;
+            font-size: 15px;
+            line-height: 1.8;
+            margin-bottom: 16px;
+            color: #5a5550;
+        }
+        
+        .price-example {
+            background: rgba(212, 165, 116, 0.08);
+            padding: 20px 24px;
+            border-left: 4px solid #d4a574;
+            margin: 24px 0;
+            font-family: Merriweather, Georgia, serif;
+            font-size: 15px;
+            line-height: 1.8;
+            color: #3d3a34;
+        }
+        
+        .price-example strong {
+            font-weight: 700;
+            color: #2a2622;
+        }
+        
+        .stat-box {
+            background: rgba(212, 165, 116, 0.08);
+            padding: 24px;
+            border-radius: 4px;
+            margin: 24px 0;
+            border-left: 4px solid #d4a574;
+        }
+        
+        .stat-number {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 36px;
+            font-weight: 700;
+            color: #2a2622;
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-family: Merriweather, Georgia, serif;
+            font-size: 14px;
+            color: #5a5550;
+        }
+        
+        .the-fix {
+            background: linear-gradient(135deg, rgba(212, 165, 116, 0.12) 0%, rgba(212, 165, 116, 0.06) 100%);
+            padding: 40px;
+            border-radius: 4px;
+            margin-top: 40px;
+        }
+        
+        .the-fix h3 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: #2a2622;
+            margin-bottom: 16px;
+            line-height: 1.2;
+        }
+        
+        .the-fix p {
+            font-family: Merriweather, Georgia, serif;
+            font-size: 15px;
+            line-height: 1.8;
+            color: #4a4640;
+            margin-bottom: 12px;
+        }
+        
+        .fix-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .fix-list li {
+            font-family: Merriweather, Georgia, serif;
+            font-size: 15px;
+            line-height: 1.8;
+            color: #4a4640;
+            padding: 8px 0 8px 24px;
+            position: relative;
+        }
+        
+        .fix-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #d4a574;
+            font-weight: 700;
+        }
+        
+
+        /* Diagram: how a trip becomes an itinerary the old way */
+        .diagram { margin: 30px auto; max-width: 640px; }
+        .diagram img { display: block; width: 100%; height: auto; background: #faf4eb; border: 1px solid rgba(212, 165, 116, 0.5); border-radius: 12px; }
+        .diagram figcaption { margin-top: 10px; text-align: center; font-size: 14px; font-style: italic; line-height: 1.5; color: #8a8480; }
+        .callout {
+            background: rgba(212, 165, 116, 0.06);
+            border-left: 4px solid #d4a574;
+            padding: 20px 24px;
+            margin: 24px 0;
+            font-family: Merriweather, Georgia, serif;
+            font-size: 15px;
+            line-height: 1.8;
+            color: #4a4640;
+            font-style: italic;
+        }
+        
+        .cta-block {
+            text-align: center;
+            margin: 80px 0 60px;
+        }
+        
+        .cta-block p {
+            font-family: Merriweather, Georgia, serif;
+            font-size: 18px;
+            margin-bottom: 32px;
+            color: #4a4640;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            padding: 18px 48px;
+            background: #3d3a34;
+            color: #faf7f2;
+            text-decoration: none;
+            font-family: Merriweather, Georgia, serif;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            border: 2px solid #3d3a34;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .cta-button:hover {
+            background: transparent;
+            color: #3d3a34;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 60px 0;
+            color: #8a8480;
+            font-family: Merriweather, Georgia, serif;
+            font-size: 13px;
+            border-top: 1px solid rgba(212, 165, 116, 0.2);
+        }
+        
+        footer a {
+            color: #d4a574;
+            text-decoration: none;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 42px;
+            }
+            
+            .section h2 {
+                font-size: 32px;
+            }
+            
+            .section {
+                padding: 40px 24px;
+                margin: 60px 0;
+            }
+            
+            .intro-text {
+                font-size: 16px;
+            }
+        }
+    </style>
+    <style>
+        /* Added when the pages moved into the app: shared logo header, readable link color, beta note */
+        .masthead { text-align: center; padding: 28px 16px 8px; }
+        .nav a { color: #85622d; }
+        .secondary-cta, footer a { color: #85622d; }
+        .secondary-cta { border-bottom-color: #85622d; }
+        header { padding-top: 44px; }
+        .cta-block .beta-note { font-size: 13px; color: #6b6660; margin: 20px 0 0; }
+        .cta-button:focus-visible, .nav a:focus-visible, .secondary-cta:focus-visible, footer a:focus-visible { outline: 3px solid #d4a574; outline-offset: 3px; }
+    </style>
+</head>
+<body>
+    <div class="masthead">
+        <div class="brand brand--lg">
+            <img src="/logo.png" width="556" height="480" alt="ai-tinerary.com, brought to you by the Wandering Mustache">
+            <a class="brand__home" href="/"><span class="sr">ai-tinerary home</span></a>
+            <a class="brand__wm" href="https://www.wanderingmustache.com" target="_blank" rel="noopener noreferrer" title="Visit wanderingmustache.com"><span class="sr">Visit Wandering Mustache (opens in a new tab)</span></a>
+        </div>
+    </div>
+    <nav class="nav" aria-label="Main">
+        <a href="/">Plan a trip</a>
+        <a href="/truth" class="active">The Truth</a>
+        <a href="/about">How it works</a>
+        <a href="https://www.wanderingmustache.com" target="_blank" rel="noopener noreferrer">Wandering Mustache</a>
+    </nav>
+
+    <div class="container">
+        <header>
+            <h1>The Truth About Travel</h1>
+            <p class="subtitle">How the industry changed—and who's really to blame</p>
+        </header>
+        
+        <div class="divider"></div>
+        
+        <div class="intro-text">
+            <p>Travel agents used to be trusted advisors. They spent years learning, building expertise, and earning their clients' respect. But the industry didn't change because of them. It changed because of consolidation, predatory "democratization," and a system that squeezes legitimate professionals into becoming transactional middlemen. This is the real story.</p>
+        </div>
+
+        <figure class="diagram">
+            <img src="/agent-path.png" width="1218" height="672" alt="Flow diagram. Your trip goes to a travel agent. The agent's choices are then shaped by three things: consortium cut, consolidator mark-ups, and the best commission. Together they produce your itinerary.">
+            <figcaption>How your trip becomes an itinerary the old way. We'll unpack each box below.</figcaption>
+        </figure>
+        
+        <div class="section">
+            <h2>The Squeeze on Real Travel Agents</h2>
+            <div class="section-content">
+                <div class="truth-block">
+                    <h3>Consortiums Take Up to 50%</h3>
+                    <p>Travel agents used to work independently or for small agencies. Now, most are forced to join massive consortiums—Virtuoso, Signature, Rosewood—that take 20-50% of their earnings just for access to booking systems and hotel negotiating power.</p>
+                    <p>A travel agent might earn a 10% commission from a hotel, but the consortium takes 40-50% of that. The agent keeps $6, the consortium keeps $4. This forces every agent to become volume-driven and transactional, booking quantity over quality. There's no margin for genuine service.</p>
+                </div>
+                
+                <div class="truth-block">
+                    <h3>The "12-Hour Travel Agent" Myth</h3>
+                    <p>Online mega-marketers promise you can be a travel agent in 12 hours. This isn't education—it's exploitation. They sell certification courses to thousands, flooding the market with untrained "agents" who undercut real professionals on price and don't know how to actually help travelers.</p>
+                    <div class="stat-box">
+                        <div class="stat-number">10,000</div>
+                        <div class="stat-label">Unvetted "agents" entering the market yearly through online certification mills</div>
+                    </div>
+                    <p>This decimates the profession. Real travel agents—people who spent years learning their craft—can't compete with someone charging $99 to slap together a Cancun itinerary.</p>
+                </div>
+                
+                <div class="truth-block">
+                    <h3>OTAs (Online Travel Agencies) Undercut Everyone</h3>
+                    <p>Expedia, Booking.com, and their ilk have consolidation power that individual agents can never match. They negotiate rates that undercut traditional agents, and they operate at a scale that lets them absorb losses to own market share.</p>
+                    <p>A legitimate travel agent who spent 20 years building expertise in luxury European travel? An OTA's algorithm can undercut them and move on. The customer gets a worse experience, but it's cheaper, so it wins.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Tour Consolidators: The Predatory System</h2>
+            <div class="section-content">
+                <div class="truth-block">
+                    <h3>How the Scam Actually Works</h3>
+                    <p>Most major attractions worldwide sell tickets directly from their official websites—at honest prices. Colosseum tickets cost €24. Churchill War Rooms costs around $40. Uffizi Gallery costs €18. But these tickets roll out in limited batches, weeks or months in advance, often at odd hours (early morning for the US market) to prevent bulk buying.</p>
+                    <p>Here's the problem: most official sites allow unlimited purchases without requiring named visitors. This creates an opportunity for consolidators operating on platforms like Viator, Tours by Locals, and dozens of others.</p>
+                </div>
+                
+                <div class="truth-block">
+                    <h3>They Buy the Entire Inventory</h3>
+                    <p>The moment tickets release—3am, 6am, whenever—consolidators deploy automated systems to buy every available ticket. No named visitors required. No allocation. They hoover up the complete inventory and lock it down.</p>
+                    <p>The official site sold out in 10 minutes. You can't get direct tickets. Only option? Consolidator tour platforms.</p>
+                </div>
+                
+                <div class="truth-block">
+                    <h3>Package It As "Private" and Triple the Price</h3>
+                    <p>The consolidator now packages these €24 tickets as a "private tour experience" and resells them for $150-500 or more. You're not actually getting anything extra—same tour operator, same time slot, same 30 other tourists on your "private" tour. But the consolidator owns the inventory, so they own the price.</p>
+                    
+                    <div class="price-example">
+                        <strong>Real example:</strong> Colosseum + Underground + Roman Forum tour. Official cost: €24. Through a consolidator on Viator? $500-600. That's a 20x markup on tickets the consolidator bought for pennies on the dollar just hours before you "booked."
+                    </div>
+                </div>
+                
+                <div class="truth-block">
+                    <h3>The Refund Loophole Seals the Deal</h3>
+                    <p>Here's where it gets truly predatory: if a consolidator doesn't sell all the tickets they hoarded, many official sites allow returns up to a few days before the tour date—for a full refund. This means the consolidator has zero financial risk.</p>
+                    <p>They buy 1,000 tickets at €24 each (€24,000 total, held free for weeks). They sell 600 of them at $500 each ($300,000 revenue). 5 days before the tour, they return the unsold 400 tickets for a full refund (€9,600 back). Net result: they profited $276,000 on inventory they never owned, with zero downside risk.</p>
+                    <p>And if they can't return unsold tickets? Selling even 10 tickets at a 10x markup still makes financial sense—the loss on the rest is trivial.</p>
+                </div>
+                
+                <div class="truth-block">
+                    <h3>The Sites and Guides Get Pennies. Consolidators Get Rich.</h3>
+                    <p>The Colosseum gets paid the same €24 per ticket, whether you buy it directly or through a consolidator. The tour guide gets paid the same hourly rate. The actual experience doesn't change. But the consolidator just extracted $476 from you for doing absolutely nothing except buying first and reselling late.</p>
+                    <p>This isn't commerce. This isn't value creation. It's artificial scarcity manufactured through automation and inventory hoarding. The consolidator created the problem (no direct tickets available) and profited from the solution (overpriced "tour packages").</p>
+                </div>
+                
+                <div class="truth-block">
+                    <h3>You're Forced Into Overprice</h3>
+                    <p>By the time you're booking your Rome trip, there are no direct tickets left. Every batch sold out in minutes—to consolidators. Your only visible option is a tour platform charging 10x the original price. You think you're getting a premium experience. You're getting held hostage by inventory manipulation.</p>
+                    <p>And the consolidators know it. They've turned tourist desperation into a business model.</p>
+                </div>
+                
+                <div class="callout">
+                    <strong>A note on tour platforms:</strong> Not every guide on Viator, Tours by Locals, or similar platforms is running the inventory-hoarding scam. Many reputable, independent tour operators use these platforms legitimately and offer genuine value. The problem isn't the platform itself—it's knowing the difference. Before you book: research the actual cost of the tour directly with the operator or official site. If a tour costs €24 direct but $500 on the platform, you know what's happening. If a guide's pricing is transparent and reasonable, they're likely legitimate. Do your homework. Know the real cost before you buy.
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>What This Means for Travelers</h2>
+            <div class="section-content">
+                <div class="truth-block">
+                    <h3>Commission Incentives Still Matter (But It's Complicated)</h3>
+                    <p>Yes, travel agents still earn commissions from hotels, airlines, and tours. But most of that commission gets taken by consortiums before it reaches the agent. The real problem isn't the agent trying to make a living—it's an industry structure that forces them to book high-volume, low-margin transactions just to survive.</p>
+                    <div class="callout">
+                        A good travel agent wants to spend time understanding your needs. But the consortium model forces them to book 10 quick trips instead of 1 complex one. The system broke them, not the other way around.
+                    </div>
+                </div>
+                
+                <div class="truth-block">
+                    <h3>You're Still Paying Hidden Markups</h3>
+                    <p>When you book through an OTA or a transactional agent, you're not getting personalized service—you're getting an algorithm. But you're still paying inflated prices because tour operators and hotels mark up for any intermediary, whether it's a consortium agent or Expedia.</p>
+                    <p>The difference? With a good travel agent, you at least get expert advice. With an OTA, you get an algorithm that doesn't know you. And with a consolidator, you get price gouging.</p>
+                </div>
+                
+                <div class="truth-block">
+                    <h3>The Real Loss: Expertise Died</h3>
+                    <p>The travel agent profession used to attract people who loved travel and wanted to help others experience the world. Now it attracts people chasing commissions or selling quick certifications. We've lost something real—the expert advisor who understands you, knows a place intimately, and builds a real relationship.</p>
+                    <p>That person still exists, but they're rare. And they're probably struggling to survive in a system stacked against them.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Why This Matters to You</h2>
+            <div class="section-content">
+                <div class="truth-block">
+                    <h3>The System Failed Everyone</h3>
+                    <p>Travel agents—the good ones—got squeezed. Travelers lost access to real expertise while paying inflated prices. Consolidators exploited scarcity for profit. Consortiums took the middle cut. OTAs won through scale, not quality.</p>
+                    <p>Nobody won except the people taking the cut.</p>
+                </div>
+            </div>
+            
+            <div class="the-fix">
+                <h3>The ai-tinerary Approach</h3>
+                <p>We're not anti-travel agent. We're anti-system. We built ai-tinerary for travelers who deserve expertise without the middleman bloat, and for the future of honest travel planning.</p>
+                <ul class="fix-list">
+                    <li><strong>No consortium cuts.</strong> Our recommendations aren't limited by who pays us the most.</li>
+                    <li><strong>No consolidator markups.</strong> We help you book directly, at real prices—not 20x inflated rates.</li>
+                    <li><strong>No hidden markups.</strong> You see exactly what you pay. No intermediary bloat.</li>
+                    <li><strong>AI + Honesty.</strong> We have the power to search comprehensively—something individual agents can't do alone.</li>
+                    <li><strong>Your Preferences First.</strong> Our tool learns what matters to you, not what pays us most.</li>
+                    <li><strong>Direct Booking.</strong> You own the relationship with the hotel, airline, or tour operator. No middleman risk.</li>
+                    <li><strong>Transparency About Everything.</strong> No hidden commissions, no preferred vendors, no secrets.</li>
+                </ul>
+                <div class="callout" style="margin-top: 24px;">
+                    We respect good travel agents. If you find one, they're worth their weight in gold. But most travelers won't have that option—they'll get algorithmic matching, transactional booking, or consolidator price gouging. We're here for everyone else.
+                </div>
+            </div>
+        </div>
+        
+        <div class="cta-block">
+            <p>Ready to reclaim your travel?</p>
+            <a class="cta-button" href="/">Build Your Itinerary</a>
+            <p class="beta-note">Invite-only while we're in beta. You'll need a passcode from Wandering Mustache.</p>
+        </div>
+        
+        <footer>
+            <p>Created by <a href="https://www.wanderingmustache.com" target="_blank" rel="noopener noreferrer">Wandering Mustache</a> — Anti-influencer travel for the discerning traveler</p>
+            <p style="margin-top: 16px; font-size: 12px;">© 2026 ai-tinerary. No middlemen. No commissions. Just honest travel planning.</p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "_how_to_use": "Add places you (Stached), a trusted client (Scouted), or a direct check (Vetted) can vouch for. The name must match what appears in itineraries. Stached needs blog_link. Scouted needs client_feedback (positive only). Vetted needs verification_method plus verified_date (phone/email) or rating of 4.5+.",
+  "places": [
+    {
+      "name": "Example Trattoria",
+      "destination": "Rome",
+      "blog_link": "https://wanderingmustache.com/example-post",
+      "client_feedback": "",
+      "verification_method": "",
+      "verified_date": "",
+      "rating": null
+    }
+  ]
+}
