@@ -40,7 +40,7 @@ export default function Stage4({ trip, review, onChange, onRun, flags = {} }) {
           <li><strong>{trip.destination}</strong>, {trip.start_date ? `${trip.start_date} to ${trip.end_date}` : `${trip.day_count} days`}</li>
           <li>Budget: {TIERS.find((t) => t.key === (g.tier || 'three_star'))?.label}, pace: {g.pace || 'Mix of Both'}</li>
           {trs.map((t) => (
-            <li key={t.id}><strong>{t.name}</strong>: {(t.styles || []).join(', ') || 'balanced'}{t.pace_align && t.pace_align !== 'Matches the group' ? `; wants ${t.pace_align.toLowerCase()}` : ''}</li>
+            <li key={t.id}><strong>{t.name}</strong>: {[...(t.why || []), t.how_spend, t.how_plan].filter(Boolean).join(', ') || 'balanced'}{t.pace_align && t.pace_align !== 'Matches the group' ? `; wants ${t.pace_align.toLowerCase()}` : ''}</li>
           ))}
         </ul>
         {flagged.length > 0 && (

@@ -227,7 +227,7 @@ export default {
      "closures_or_warnings": [
       "The Vatican Museums are closed on Sundays"
      ],
-     "accessibility": "Cobblestones and uneven pavement almost everywhere; buses and walking cover most sights.",
+     "walkability": "Cobblestones and uneven pavement almost everywhere. Expect a lot of walking; buses cover the longer distances. If you need specific accessibility accommodations, check with local transit authorities or accessibility organizations before you go.",
      "booking_advice": "Book timed entry for the Colosseum, Vatican and Galleria Borghese 3–4 weeks ahead."
     },
     "daily_estimate": {
@@ -406,10 +406,12 @@ export default {
    "id": "t1",
    "name": "Dana",
    "age": "55–64",
-   "styles": [
+   "why": [
     "The Reminiscer",
     "Foodie"
    ],
+   "how_spend": "Cost-Benefit",
+   "how_plan": "Reliable Rover",
    "dining": "Local haunts",
    "interests": [
     "Food",
@@ -446,10 +448,11 @@ export default {
    "id": "t2",
    "name": "Jordan",
    "age": "55–64",
-   "styles": [
-    "Deep Diver",
+   "why": [
     "The Immersed"
    ],
+   "how_spend": "Cost-Benefit",
+   "how_plan": "Deep Diver",
    "dining": "Casual",
    "interests": [
     "Museums",
@@ -484,6 +487,10 @@ export default {
   "title": "Rome in 3 days: ancient sights, one great anniversary dinner",
   "summary": "Three days that pair the big ancient sights with long lunches and slower evenings. Jordan gets a full morning at the Vatican Museums while Dana takes a slower start, and you meet up at St. Peter's.",
   "notes": [
+   {
+    "title": "Getting around",
+    "text": "If you need step-free routes or other accessibility accommodations, check with local transit authorities or accessibility organizations before you go."
+   },
    {
     "title": "Allergies",
     "text": "We searched for restaurants with accommodations, but cannot guarantee food safety. Always inform restaurants of allergies directly."
@@ -608,7 +615,7 @@ export default {
         "loyalty_note": "",
         "verification_tier": "Stached",
         "verification_voice": "We've been there — and loved it. This is the real thing.",
-        "blog_link": "https://wanderingmustache.com"
+        "blog_link": "https://wanderingmustache.com/example-trattoria-monti"
        },
        {
         "name": "Ai Tre Scalini",

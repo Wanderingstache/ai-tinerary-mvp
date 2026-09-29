@@ -43,18 +43,26 @@ export const MUST_DO_CATS = ['Major landmarks', 'Local food scene', 'Museums/his
 export const MUST_AVOID_CATS = ['Long travel days', 'Early mornings', 'Crowded tourist traps', 'Guided tour groups', 'Lots of walking/stairs', 'Late nights', 'Big cities', 'Rural/off-the-grid areas'];
 
 export const AGES = ['Under 18', '18–24', '25–34', '35–44', '45–54', '55–64', '65+'];
-export const STYLES = [
+// Matches the Wandering Mustache travel-style quiz: WHY someone travels (their motivation) is
+// separate from HOW they travel (spending style and planning style), not one flat list.
+export const WHY_TYPES = [
   { key: 'The Reminiscer', line: 'Collects stories and memories' },
-  { key: 'The Immersed', line: 'Deep immersion; skips tourist spots for authenticity' },
-  { key: 'Deep Diver', line: 'Energized by research, logistics, hidden gems' },
-  { key: 'Contributor', line: 'Travel tied to volunteering and social impact' },
-  { key: 'Foodie', line: 'Food is the main event' },
-  { key: 'Reliable Rover', line: 'Predictability over adventure' },
-  { key: 'Adventurer', line: 'Chases physical challenges' },
-  { key: 'Bucket-Lister', line: 'Iconic sights and checklists' },
-  { key: 'Thrifty Drifter', line: 'Value-seeking, deal-focused' },
-  { key: 'Wellness Wanderer', line: 'Recharge and mindfulness' },
-  { key: 'Luxury Connoisseur', line: 'Premium stays and curated experiences' },
+  { key: 'The Immersed', line: 'Deep, sensory connection to a place' },
+  { key: 'The Adventurer', line: 'Chases a physical challenge' },
+  { key: 'Contributor', line: 'Travel that gives back' },
+  { key: 'Collector', line: 'Bucket-list, checking places off' },
+  { key: 'Foodie', line: 'The meals are the trip' },
+  { key: 'Wellness Wanderer', line: 'Restoration and transformation' },
+];
+export const HOW_BUDGET = [
+  { key: 'Thrifty Drifter', line: 'The deal is the goal' },
+  { key: 'Cost-Benefit', line: 'Solid value, no overpaying' },
+  { key: 'Lux Life', line: 'Full-service, no compromises' },
+];
+export const HOW_PLAN = [
+  { key: 'Deep Diver', line: 'Researches every detail' },
+  { key: 'Choose-Your-Own-Adventure', line: 'A few anchors, rest unplanned' },
+  { key: 'Reliable Rover', line: 'Familiar and low-risk' },
 ];
 export const DINING = ['Fine dining', 'Casual', 'Street food', 'Local haunts'];
 export const INTERESTS = ['Museums', 'Hiking', 'Nightlife', 'Food', 'Wellness', 'Art', 'Shopping', 'History', 'Luxury', 'Walking tours', 'Culture'];
@@ -94,7 +102,7 @@ export const CONFLICT_CHOICES = [
 
 export function newTraveler(i) {
   return {
-    id: `t${Date.now()}${i}`, name: '', age: '', styles: [], dining: '', interests: [], interests_other: '',
+    id: `t${Date.now()}${i}`, name: '', age: '', why: [], how_spend: '', how_plan: '', dining: '', interests: [], interests_other: '',
     must_dos: [], pace_align: 'Matches the group', avoid: [], avoid_other: '', flexibility: '',
     activity_level: '', rhythm: '', food_adventure: '', food_dislikes: '', solo_time: '', observance: [],
     observance_other: '', alcohol: '', needs_types: [], physical: [], physical_other: '', neuro: [],

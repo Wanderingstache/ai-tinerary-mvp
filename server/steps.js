@@ -87,7 +87,9 @@ function travelersText(trip, { includeNeeds = true } = {}) {
   return (trip.travelers || []).map((t, i) => {
     const lines = [
       `Traveler ${i + 1}: ${t.name || 'Traveler ' + (i + 1)}${t.age ? ` (age ${t.age})` : ''}`,
-      `  Travel styles: ${(t.styles || []).join(', ') || 'Reminiscer, Immersed (default)'}`,
+      (t.why || []).length && `  Why they travel: ${t.why.join(', ')}`,
+      t.how_spend && `  Spending style: ${t.how_spend}`,
+      t.how_plan && `  Planning style: ${t.how_plan}`,
       t.dining && `  Dining style: ${t.dining}`,
       (t.interests || []).length && `  Interests: ${t.interests.join(', ')}${t.interests_other ? ', ' + t.interests_other : ''}`,
       (t.must_dos || []).length && `  Must-dos: ${t.must_dos.map((m) => `${m.label} [${m.priority === 'nice' ? 'nice to have' : 'MUST'}]`).join('; ')}`,
@@ -220,8 +222,11 @@ Return JSON: {"currency":"",
  "acts":{"activities_per_person_per_day":${PRICE_TIERS_JSON},"key_prices":[{"name":"","price":"","book_ahead":true,"official_site":"","source_url":""}],"free_highlights":[""],"notes":[""]},
  "sources":[""]}
 food_per_person_per_day = three meals for one person at that tier. Local currency.`,
-  price_context: (t) => `Search the web for travel context for ${t.destination} during ${when(t)}: season (peak/shoulder/low), typical weather, crowd levels, holidays, strikes or closures, major events, and general accessibility of the city (terrain, step-free transit).
-Return JSON: {"season":"","weather":"","crowds":"","events":[""],"closures_or_warnings":[""],"accessibility":"","booking_advice":"","sources":[""]}`,
+  price_context: (t) => `Search the web for travel context for ${t.destination} during ${when(t)}: season (peak/shoulder/low), typical weather, crowd levels, holidays, strikes or closures, and major events. Also describe how walkable the city is day to day: terrain, hills, cobblestones, and how much walking a typical visitor should
+expect. End that description with one short, matter-of-fact sentence recommending that travelers with specific accessibility
+needs check with local accessibility organizations or the transit authority before they go. State it as ordinary, practical
+advice — never as an apology, and never say the data here is incomplete or unavailable.
+Return JSON: {"season":"","weather":"","crowds":"","events":[""],"closures_or_warnings":[""],"walkability":"","booking_advice":"","sources":[""]}`,
 };
 const PRICING_FAIL_LABEL = { price_stay: 'lodging & transport', price_eat_do: 'meals & activities', price_context: 'season & context' };
 
@@ -514,6 +519,7 @@ Return JSON: {"links":[{"url":"","verdict":"official|primary_platform|backup_pla
   // ── Notes that always apply ──
   const trs = trip.travelers || [];
   itin.notes = [];
+  itin.notes.push({ title: 'Getting around', text: 'If you need step-free routes or other accessibility accommodations, check with local transit authorities or accessibility organizations before you go.' });
   if (trs.some((t) => activeNeedTypes(t).includes('physical'))) {
     itin.notes.push({ title: 'Accessible rooms', text: 'Accessible rooms may cost more than standard rooms at this tier. We can\'t verify exact pricing without checking the hotel\'s booking page — we recommend confirming accessibility features and costs directly with the hotel before booking.' });
   }

@@ -71,7 +71,7 @@ function PricingCard({ p }) {
           {p.context.crowds && <li><strong>Crowds:</strong> {p.context.crowds}</li>}
           {p.context.events?.filter(Boolean).length > 0 && <li><strong>Events:</strong> {p.context.events.join('; ')}</li>}
           {p.context.closures_or_warnings?.filter(Boolean).length > 0 && <li><strong>Heads up:</strong> {p.context.closures_or_warnings.join('; ')}</li>}
-          {p.context.accessibility && <li><strong>Getting around:</strong> {p.context.accessibility}</li>}
+          {p.context.walkability && <li><strong>Getting around:</strong> {p.context.walkability}</li>}
         </ul>
       )}
       {p.failed?.length > 0 && <p className="fine">We couldn't get current prices for: {p.failed.join(', ')}. Those will be checked again when your itinerary is built.</p>}

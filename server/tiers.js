@@ -24,7 +24,10 @@ export function assignTier(name, destination) {
   const d = norm(destination).split(' ')[0];
   const match = n && places.find((p) => norm(p.name) === n && (!p.destination || norm(p.destination).includes(d) || d.includes(norm(p.destination))));
   // Order of preference: Stached → Scouted → Vetted → AI-ed
-  if (match?.blog_link) return { verification_tier: 'Stached', verification_voice: VOICE.Stached, blog_link: match.blog_link };
+  // Stached means "we've personally been and vouch for it" — that's true whether or not it's
+  // ever been written up. blog_link is optional: add it when there's a specific post to point
+  // to, and the itinerary links to it; leave it out and the place still gets the Stached badge.
+  if (match?.stached) return { verification_tier: 'Stached', verification_voice: VOICE.Stached, ...(match.blog_link ? { blog_link: match.blog_link } : {}) };
   if (match?.client_feedback) return { verification_tier: 'Scouted', verification_voice: VOICE.Scouted, client_feedback: match.client_feedback };
   if (match?.verification_method && (match.verified_date || Number(match.rating) >= 4.5)) {
     return { verification_tier: 'Vetted', verification_voice: VOICE.Vetted, verification_method: match.verification_method, verified_date: match.verified_date || null };

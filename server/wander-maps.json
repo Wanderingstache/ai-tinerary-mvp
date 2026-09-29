@@ -1,14 +1,15 @@
 {
-  "_how_to_use": "Add places you (Stached), a trusted client (Scouted), or a direct check (Vetted) can vouch for. The name must match what appears in itineraries. Stached needs blog_link. Scouted needs client_feedback (positive only). Vetted needs verification_method plus verified_date (phone/email) or rating of 4.5+.",
-  "places": [
-    {
-      "name": "Example Trattoria",
-      "destination": "Rome",
-      "blog_link": "https://wanderingmustache.com/example-post",
-      "client_feedback": "",
-      "verification_method": "",
-      "verified_date": "",
-      "rating": null
-    }
-  ]
+  "_how_to_use": "Add places you (Stached), a trusted client (Scouted), or a direct check (Vetted) can vouch for. The name must match what appears in itineraries. Stached: set stached:true for anywhere you've personally been and vouch for — a blog post isn't required. If you HAVE written it up, also add blog_link, the direct URL to that specific post on wanderingmustache.com, never the bare homepage or a category page; travelers see it as an 'Our write-up' link, so it must open the actual write-up. Leave blog_link blank ('') if there's no post — the place still gets the Stached badge, just without a link. Scouted needs client_feedback (positive only). Vetted needs verification_method plus verified_date (phone/email) or rating of 4.5+.",
+  "_template": "The app only reads the \"places\" list below, so this line and this template are never shown to a traveler or matched against a trip — copy the shape into \"places\" when you add a real one.",
+  "_example_you_can_copy": {
+    "name": "Name exactly as it should appear in an itinerary",
+    "destination": "City",
+    "stached": true,
+    "blog_link": "https://wanderingmustache.com/the-specific-post (or \"\" if there isn't one)",
+    "client_feedback": "",
+    "verification_method": "",
+    "verified_date": "",
+    "rating": null
+  },
+  "places": []
 }

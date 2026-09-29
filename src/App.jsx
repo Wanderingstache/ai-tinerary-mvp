@@ -7,7 +7,7 @@ import Stage3 from './Stage3.jsx';
 import Stage4, { stage4Ready } from './Stage4.jsx';
 import Itinerary from './Itinerary.jsx';
 import { newTraveler } from './options.js';
-import { go, link, currentPath, isHash } from './router.js';
+import { go, link, currentPath, isHash, isRouteHash } from './router.js';
 
 
 function Header({ large, topNav }) {
@@ -309,7 +309,13 @@ export default function App({ pages }) {
   const [path, setPath] = useState(currentPath());
   useEffect(() => {
     if (!isHash()) return undefined;
-    const onChange = () => { setPath(currentPath()); window.scrollTo(0, 0); };
+    // A plain in-page anchor (e.g. the itinerary's "#day-1") changes the hash too, but it isn't
+    // a page change — leave the browser's own jump-to-anchor alone, don't touch React's page state.
+    const onChange = () => {
+      const h = window.location.hash.replace(/^#/, '');
+      if (!isRouteHash(h)) return;
+      setPath(currentPath()); window.scrollTo(0, 0);
+    };
     window.addEventListener('hashchange', onChange);
     return () => window.removeEventListener('hashchange', onChange);
   }, []);

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Q, Tiles, Text, StepStatus } from './ui.jsx';
 import {
-  AGES, STYLES, DINING, INTERESTS, PACE_ALIGN, AVOID, FLEXIBILITY, ACTIVITY_LEVEL, RHYTHM, FOOD_ADVENTURE,
+  AGES, WHY_TYPES, HOW_BUDGET, HOW_PLAN, DINING, INTERESTS, PACE_ALIGN, AVOID, FLEXIBILITY, ACTIVITY_LEVEL, RHYTHM, FOOD_ADVENTURE,
   SOLO_TIME, OBSERVANCE, ALCOHOL, NEEDS_TYPES, PHYSICAL, NEURO, HEALTH, DIET, GLUTEN_LEVEL,
 } from './options.js';
 
@@ -42,6 +42,8 @@ function Card({ t, i, set, needsOn, tiles, skipDetails, onCopyPrev, flags }) {
   const needTypeOptions = NEEDS_TYPES.filter((n) => flags[n.key]);
   const dietOptions = DIET.filter((d) => flags.gluten || d !== 'Gluten-free / Celiac');
   const who = t.name || (i === 0 ? 'you' : `traveler ${i + 1}`);
+  const doVerb = who === 'you' ? 'do' : 'does';
+  const beVerb = who === 'you' ? 'are' : 'is';
   return (
     <div className="card-body">
       <div className="row">
@@ -53,8 +55,14 @@ function Card({ t, i, set, needsOn, tiles, skipDetails, onCopyPrev, flags }) {
       )}
       {!skipDetails && (
         <>
-          <Q label={`How does ${who} like to travel?`} help={<>Pick up to 3. Don't know yet?{' '}<a href="https://wanderingmustache.com/traveler-types" target="_blank" rel="noopener noreferrer">Take the Wandering Mustache travel style quiz<span className="sr"> (opens in a new tab)</span></a> and come back.</>}>
-            <Tiles multi max={3} options={STYLES} value={t.styles} onChange={(v) => set({ styles: v })} />
+          <Q label={`Why ${doVerb} ${who} travel?`} help={<>Pick up to 2 — the one that matters most, and one more if it's close. Don't know yet?{' '}<a href="https://wanderingmustache.com/traveler-types" target="_blank" rel="noopener noreferrer">Take the Wandering Mustache travel style quiz<span className="sr"> (opens in a new tab)</span></a> and come back.</>}>
+            <Tiles multi max={2} options={WHY_TYPES} value={t.why} onChange={(v) => set({ why: v })} />
+          </Q>
+          <Q label={`When it comes to spending on a trip, ${who} ${beVerb}\u2026`}>
+            <Tiles options={HOW_BUDGET} value={t.how_spend} onChange={(v) => set({ how_spend: v || '' })} />
+          </Q>
+          <Q label={`When it comes to planning a trip, ${who} ${beVerb}\u2026`}>
+            <Tiles options={HOW_PLAN} value={t.how_plan} onChange={(v) => set({ how_plan: v || '' })} />
           </Q>
           <Q label="Must-dos on this trip" optional>
             <StepStatus step={tiles.step} working="Finding ideas for this destination…" onRetry={tiles.retry} />
@@ -173,7 +181,7 @@ export default function Stage3({ trip, travelers, onChange, onRun, skipDetails, 
           <button type="button" className="card-head" aria-expanded={open === i} onClick={() => setOpen(open === i ? -1 : i)}>
             <span className="card-head__num">{i + 1}</span>
             <span className="card-head__name">{t.name || (i === 0 ? 'You' : `Traveler ${i + 1}`)}</span>
-            <span className="card-head__meta">{[t.age, ...(t.styles || [])].filter(Boolean).join(', ')}</span>
+            <span className="card-head__meta">{[t.age, ...(t.why || []), t.how_spend, t.how_plan].filter(Boolean).join(', ')}</span>
           </button>
           {open === i && (
             <Card t={t} i={i} set={(p) => setT(i, p)} needsOn={needsOn} tiles={tiles} skipDetails={skipDetails} onCopyPrev={() => copyPrev(i)} flags={flags} />
