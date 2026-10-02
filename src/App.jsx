@@ -6,6 +6,7 @@ import Stage2 from './Stage2.jsx';
 import Stage3 from './Stage3.jsx';
 import Stage4, { stage4Ready } from './Stage4.jsx';
 import Itinerary from './Itinerary.jsx';
+import InviteFlow from './InviteFlow.jsx';
 import { newTraveler } from './options.js';
 import { go, link, currentPath, isHash, isRouteHash } from './router.js';
 
@@ -167,16 +168,29 @@ function TripFlow({ id }) {
     try { await api.run(id, step); await load(); } catch (e) { setError(e.message); }
   };
 
+  // With no nextView, this just persists in place (used by Share Trip's roster actions below) —
+  // the view doesn't change and the page doesn't jump to the top.
   const save = async (patch, nextView) => {
     setBusy(true); setError('');
     try {
-      const t = await api.saveTrip(id, { ...patch, stage: nextView });
+      const t = await api.saveTrip(id, nextView ? { ...patch, stage: nextView } : patch);
       setTrip(t);
-      setView(nextView);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (nextView) { setView(nextView); window.scrollTo({ top: 0, behavior: 'smooth' }); }
       return t;
     } catch (e) { setError(e.message); return null; } finally { setBusy(false); }
   };
+  // Share Trip: saves a change to the group-level answers (the answer mode, the deadline)
+  // immediately, without waiting for the step's own Continue button. Also updates the local
+  // draft, so going Back to Trip details and Continue-ing forward again doesn't resend a stale
+  // copy of group_answers that's missing this change.
+  const groupPatch = (patch) => {
+    const merged = { ...trip.group_answers, ...patch };
+    setDraft({ ...draft, group_answers: merged });
+    return save({ group_answers: merged });
+  };
+  // Share Trip: saves the current traveler names right away, so each one gets an invite_token
+  // back from the server and a link becomes copyable.
+  const saveRoster = async () => { const t = await save({ travelers: draft.travelers }); if (t) setDraft({ ...draft, travelers: t.travelers }); };
 
   if (error && !trip) return <main className="wrap"><p className="status status--error">{error}</p><a href={link('/')}>Start a new trip</a></main>;
   if (!trip || !draft) return <main className="wrap"><p className="status status--working"><span className="dot" />Loading your trip…</p></main>;
@@ -194,11 +208,19 @@ function TripFlow({ id }) {
   const toReview = async () => {
     const unnamed = draft.travelers.findIndex((t) => !t.name.trim());
     if (unnamed !== -1) return setError(`Add a name for traveler ${unnamed + 1}.`);
-    const travelers = skipDetails ? draft.travelers.map((t) => ({ ...newTraveler(0), id: t.id, name: t.name, age: t.age, needs_types: t.needs_types, physical: t.physical, neuro: t.neuro, health: t.health, diet: t.diet, diet_other: t.diet_other })) : draft.travelers;
-    const t = await save({ travelers }, 'review');
+    const selfMode = trip.group_answers?.intake_mode === 'self';
+    // In self-answer mode, each person's own card was already saved straight to the server the
+    // moment they submitted it — the organizer's local copy here is just whatever it looked like
+    // on page load, and is likely stale by now. Sending it would silently overwrite anyone who's
+    // answered since. So self mode only advances the stage; everything else about the travelers
+    // is left exactly as the server already has it.
+    const travelers = selfMode ? undefined : skipDetails
+      ? draft.travelers.map((t) => ({ ...newTraveler(0), id: t.id, name: t.name, age: t.age, needs_types: t.needs_types, physical: t.physical, neuro: t.neuro, health: t.health, diet: t.diet, diet_other: t.diet_other }))
+      : draft.travelers;
+    const t = await save(travelers ? { travelers } : {}, 'review');
     if (!t) return;
     run('review_check');
-    const needsAny = travelers.some((x) => (x.needs_types || []).length || (x.diet || []).length || x.diet_other);
+    const needsAny = (t.travelers || []).some((x) => (x.needs_types || []).length || (x.diet || []).length || x.diet_other);
     if (needsAny) run('needs');
   };
   const build = async () => {
@@ -237,14 +259,15 @@ function TripFlow({ id }) {
       {view === 'travelers' && (
         <>
           <h1 className="title">{count > 1 ? 'Travelers' : 'About you'}</h1>
-          <Stage3 trip={trip} travelers={draft.travelers} onChange={set('travelers')} onRun={run} skipDetails={skipDetails} setSkipDetails={setSkipDetails} flags={flags} />
+          <Stage3 trip={trip} travelers={draft.travelers} onChange={set('travelers')} onRun={run} skipDetails={skipDetails} setSkipDetails={setSkipDetails} flags={flags}
+            onGroupPatch={groupPatch} onSaveRoster={saveRoster} onRefresh={load} busy={busy} />
           <Nav onBack={() => setView('group')} onNext={toReview} nextLabel="Review" busy={busy} />
         </>
       )}
       {view === 'review' && (
         <>
           <h1 className="title">Review</h1>
-          <Stage4 trip={trip} review={draft.review} onChange={set('review')} onRun={run} flags={flags} />
+          <Stage4 trip={trip} review={draft.review} onChange={set('review')} onRun={run} flags={flags} onRefresh={load} />
           <p className="fine">{stage4Ready(trip, draft.review) || 'Building takes 2–5 minutes. You can leave this page open.'}</p>
           <Nav onBack={() => setView('travelers')} onNext={build} nextLabel="Build my itinerary" disabled={!!stage4Ready(trip, draft.review) || versionsLeft <= 0} busy={busy} />
         </>
@@ -322,11 +345,15 @@ export default function App({ pages }) {
   const Page = pages?.[path];
   if (Page) return <Page />;
   const tripMatch = path.match(/^\/trip\/([0-9a-f-]{36})/i);
+  const inviteMatch = path.match(/^\/invite\/([0-9a-f-]{36})/i);
   const isPlan = path === '/' || path === '/plan';
   return (
     <>
       <Header large={isPlan} topNav={isPlan} />
-      {tripMatch ? <TripFlow key={path} id={tripMatch[1]} /> : path.startsWith('/admin') ? <Admin /> : isPlan ? <Plan key={path} /> : <NotFound />}
+      {tripMatch ? <TripFlow key={path} id={tripMatch[1]} />
+        : inviteMatch ? <InviteFlow key={path} token={inviteMatch[1]} />
+        : path.startsWith('/admin') ? <Admin />
+        : isPlan ? <Plan key={path} /> : <NotFound />}
       <footer className="foot">
         <p><a href={link('/')}>Plan a trip</a> · <a href={link('/truth')}>The Truth About Travel</a> · <a href={link('/about')}>How it works</a> · <a href="https://www.wanderingmustache.com" target="_blank" rel="noopener noreferrer">Wandering Mustache</a></p>
         <p>Invite-only planning by Wandering Mustache.</p>

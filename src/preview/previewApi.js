@@ -94,10 +94,42 @@ export const previewApi = {
       Object.assign(trip, d, { basics: clone(patch.basics) });
       if (changed) { trip.research = {}; start('sights'); }
     }
-    ['group_answers', 'travelers', 'review', 'stage'].forEach((k) => { if (patch[k]) trip[k] = clone(patch[k]); });
+    if (patch.group_answers) trip.group_answers = clone(patch.group_answers);
+    if (patch.travelers) {
+      // Share Trip: mirrors the real server — once self-answer mode is on, any traveler without
+      // an invite_token yet gets one, so "Copy link" works the moment names are saved.
+      const mode = patch.group_answers?.intake_mode ?? trip.group_answers?.intake_mode;
+      trip.travelers = clone(patch.travelers).map((t) => (mode === 'self' && !t.invite_token ? { ...t, invite_token: crypto.randomUUID() } : t));
+    }
+    ['review', 'stage'].forEach((k) => { if (patch[k]) trip[k] = clone(patch[k]); });
     trip.updated_at = stamp();
     persist();
     return clone(trip);
+  },
+  // Share Trip: the preview only ever has the one sample trip, so finding "the trip with this
+  // token" is just a scan of its travelers — same end result as the real server's lookup.
+  getInvite: async (token) => {
+    await wait(200);
+    const t = trip?.travelers?.find((x) => x.invite_token === token);
+    if (!t) throw fail("We couldn't find a trip for this link. It may have been replaced by a newer one.", 404);
+    return {
+      destination: trip.destination, start_date: trip.start_date, end_date: trip.end_date, day_count: trip.day_count,
+      traveler: clone(t),
+      tiles: trip.research?.tiles?.result?.tiles || [],
+      promoted_sights: trip.group_answers?.promoted_sights || [],
+      missed: trip.group_answers?.been_before === 'before' ? trip.group_answers?.bb_missed : null,
+      needs_gate: trip.group_answers?.needs_gate || '',
+    };
+  },
+  saveInvite: async (token, body) => {
+    await wait(250);
+    const idx = trip?.travelers?.findIndex((x) => x.invite_token === token);
+    if (idx === -1 || idx === undefined) throw fail("We couldn't find a trip for this link. It may have been replaced by a newer one.", 404);
+    const prev = trip.travelers[idx];
+    const next = { ...prev, ...clone(body), id: prev.id, invite_token: prev.invite_token, status: 'done' };
+    trip.travelers = trip.travelers.map((t, i) => (i === idx ? next : t));
+    persist();
+    return { ok: true, traveler: clone(next) };
   },
   run: async (id, step) => {
     if (!trip || id !== ID) throw fail('Trip not found', 404);

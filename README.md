@@ -88,3 +88,22 @@ The pricing card's transport row depends on the budget tier: public transport an
 public at 4-Star, and private only (car with driver, private transfers) at 5-Star. Private rides are priced per vehicle and split
 between two travelers, so every figure is per person. The prompts are in `server/steps.js` (`price_stay`, the Stage 1 snapshot and
 the itinerary rules). The itinerary follows the same defaults unless the group clearly chose a different way of getting around.
+
+## Share Trip
+On the Travelers step, the organizer can choose "Let each person answer for themselves" instead of
+filling in every card. Each traveler then gets their own link (`/invite/<token>`) that shows only
+their own card — never the budget, the trip dates (beyond context), or anyone else's answers.
+
+- A traveler's `invite_token` is assigned the moment the organizer saves names in that mode
+  (`server/index.js`, the `PUT /api/trips/:id` handler) — no separate "generate links" step.
+- `GET /api/invite/:token` and `PUT /api/invite/:token` are deliberately narrow: they return/accept
+  only that one traveler's fields, found via a Postgres JSONB containment query
+  (`getTripByInviteToken` in `server/steps.js`) rather than a second lookup table.
+- The organizer can set an optional response deadline. Once it's passed, Review just says it's fine
+  to build anyway — nothing builds on its own. A traveler who never answers is treated as easygoing
+  and flexible, not as a blocker (see `travelersText()`'s `unansweredSelf` note).
+- Going back to Trip details and forward again, or clicking Review, never overwrites a traveler's
+  real submission with the organizer's local (possibly stale) copy — self mode never re-sends the
+  whole travelers array, only the stage change.
+- `src/Stage3.jsx`'s `Card` component is shared between the organizer's view and the invite page
+  (`src/InviteFlow.jsx`), so a question added to one appears in both automatically.

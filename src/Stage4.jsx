@@ -10,7 +10,7 @@ const STATUS_TEXT = {
   unknown: "Couldn't confirm",
 };
 
-export default function Stage4({ trip, review, onChange, onRun, flags = {} }) {
+export default function Stage4({ trip, review, onChange, onRun, flags = {}, onRefresh }) {
   const set = (patch) => onChange({ ...review, ...patch });
   const check = trip.research?.review_check;
   const needs = trip.research?.needs;
@@ -33,6 +33,21 @@ export default function Stage4({ trip, review, onChange, onRun, flags = {} }) {
   return (
     <div className="stage">
       <p className="lede">Only you see this page. Look it over, answer any questions below, then build the itinerary.</p>
+
+      {g.intake_mode === 'self' && (
+        <section className="panel">
+          <h2 className="panel__title">Who's answered</h2>
+          <ul className="plain">
+            {trs.map((t) => (
+              <li key={t.id}><strong>{t.name}</strong>: <span className={`chip ${t.status === 'done' ? 'chip--done' : ''}`}>{t.status === 'done' ? 'Done' : 'Pending'}</span></li>
+            ))}
+          </ul>
+          {g.response_deadline && g.response_deadline < new Date().toISOString().slice(0, 10) && trs.some((t) => t.status !== 'done') && (
+            <p className="note">The response deadline has passed. It's fine to build the itinerary now — anyone who hasn't answered gets an easygoing, flexible default.</p>
+          )}
+          {onRefresh && <button type="button" className="btn btn--ghost btn--small" onClick={onRefresh}>Check for updates</button>}
+        </section>
+      )}
 
       <section className="panel">
         <h2 className="panel__title">Your trip</h2>

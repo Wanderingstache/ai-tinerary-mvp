@@ -104,11 +104,19 @@ h3 { font: 600 18px/1.3 var(--head); margin: 18px 0 6px; }
 .panel--ask { border: 2px solid var(--rust); }
 .panel__title { margin: 0 0 8px; }
 .glance { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; }
+.glance__links { display: inline-flex; gap: 12px; margin-left: 8px; font-size: 14px; white-space: nowrap; }
+.glance__links .linkbtn.is-added { color: var(--sage); }
 @media (max-width: 640px) { .glance { grid-template-columns: 1fr; } }
 .plain { list-style: none; padding: 0; margin: 0; }
 .plain li { padding: 5px 0; border-bottom: 1px dashed var(--line); }
 .plain li:last-child { border-bottom: 0; }
 .chip { display: inline-block; margin-left: 6px; padding: 1px 9px; border-radius: 999px; font: 600 12.5px/1.6 var(--head); border: 1px solid var(--rope); color: var(--leather); vertical-align: 1px; }
+.chip--done { border-color: var(--sage); color: var(--sage); }
+
+/* Share Trip: the organizer's roster of per-traveler invite links */
+.roster { display: grid; gap: 10px; margin: 14px 0; }
+.roster__row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+.roster__row .input { flex: 1; min-width: 140px; margin: 0; }
 .note { background: rgba(184, 149, 95, 0.16); padding: 10px 14px; border-radius: 8px; font-size: 15.5px; }
 .fine { font-size: 14px; color: var(--ink-soft); }
 .warn { color: var(--rust); font-size: 14.5px; margin: 4px 0; }

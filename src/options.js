@@ -102,7 +102,7 @@ export const CONFLICT_CHOICES = [
 
 export function newTraveler(i) {
   return {
-    id: `t${Date.now()}${i}`, name: '', age: '', why: [], how_spend: '', how_plan: '', dining: '', interests: [], interests_other: '',
+    id: `t${Date.now()}${i}`, name: '', age: '', status: 'pending', invite_token: '', why: [], how_spend: '', how_plan: '', dining: '', interests: [], interests_other: '',
     must_dos: [], pace_align: 'Matches the group', avoid: [], avoid_other: '', flexibility: '',
     activity_level: '', rhythm: '', food_adventure: '', food_dislikes: '', solo_time: '', observance: [],
     observance_other: '', alcohol: '', needs_types: [], physical: [], physical_other: '', neuro: [],

@@ -10,7 +10,8 @@ export default {
       "name": "Colosseum",
       "why": "The arena that defines ancient Rome.",
       "time_needed": "2–3 hours",
-      "book_ahead": true
+      "book_ahead": true,
+      "official_site": "https://parcocolosseo.it/en/"
      },
      {
       "name": "Roman Forum & Palatine Hill",

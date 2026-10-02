@@ -27,6 +27,13 @@ export async function getTrip(id) {
   return r.rows[0] || null;
 }
 
+// Share Trip: finds the trip that contains a traveler with this invite_token. The containment
+// query (@>) uses the GIN index on the travelers column, so this stays fast as trips grow.
+export async function getTripByInviteToken(token) {
+  const r = await query(`SELECT * FROM trips WHERE travelers @> $1::jsonb LIMIT 1`, [JSON.stringify([{ invite_token: token }])]);
+  return r.rows[0] || null;
+}
+
 // Start a step in the background. Won't start it twice at the same time.
 export async function startStep(tripId, key, fn) {
   const trip = await getTrip(tripId);
@@ -85,8 +92,10 @@ function basicsText(trip) {
 // Sensitive details are only sent to the steps that need them.
 function travelersText(trip, { includeNeeds = true } = {}) {
   return (trip.travelers || []).map((t, i) => {
+    const unansweredSelf = trip.group_answers?.intake_mode === 'self' && t.status !== 'done';
     const lines = [
       `Traveler ${i + 1}: ${t.name || 'Traveler ' + (i + 1)}${t.age ? ` (age ${t.age})` : ''}`,
+      unansweredSelf && '  Hasn\'t submitted their own answers yet — plan for them as easygoing and flexible, with no strong preferences either way.',
       (t.why || []).length && `  Why they travel: ${t.why.join(', ')}`,
       t.how_spend && `  Spending style: ${t.how_spend}`,
       t.how_plan && `  Planning style: ${t.how_plan}`,
@@ -162,10 +171,14 @@ function framingPrompt(trip) {
   return `
 Destination: ${trip.destination}. Trip: ${when(trip)}.
 Two things, to frame the rest of the intake:
-1) The sights and areas a first-time planner should know about.
+1) The sights and areas a first-time planner should know about. For each sight, search the web for its own
+   official website (the venue's or site's own page — a ticketing or visiting-info page is fine). Only include
+   official_site if you found it this session and are confident it's the real site, not a reseller or a general
+   guide page; leave it as an empty string rather than guess, the same way you would for a price or a URL anywhere
+   else in this app.
 2) A general budget snapshot for this destination from your knowledge (a live web price check comes later).
 Return JSON:
-{"sights":[{"name":"","why":"one short sentence","time_needed":"e.g. 2–3 hours","book_ahead":true}],
+{"sights":[{"name":"","why":"one short sentence","time_needed":"e.g. 2–3 hours","book_ahead":true,"official_site":""}],
  "neighborhoods":[{"name":"","character":"one short sentence"}],
  "day_trips":[{"name":"","travel_time":""}],
  "currency":"ISO code travelers will pay in","cost_level":"one sentence on how expensive this place is overall",
@@ -188,7 +201,7 @@ export async function startFraming(tripId) {
   await setResearch(tripId, 'sights', stamp);
   await setResearch(tripId, 'budget', stamp);
   try {
-    const r = await runStep(tripId, 'sights', framingPrompt(trip), { maxTokens: 3500 });
+    const r = await runStep(tripId, 'sights', framingPrompt(trip), { maxTokens: 6000 });
     await setResearch(tripId, 'sights', { status: 'done', result: { sights: r.sights || [], neighborhoods: r.neighborhoods || [], day_trips: r.day_trips || [] } });
     await setResearch(tripId, 'budget', { status: 'done', result: { currency: r.currency || '', cost_level: r.cost_level || '', tiers: r.tiers || {}, notes: r.notes || [] } });
   } catch (err) {
@@ -407,6 +420,18 @@ Return JSON:
 const mapsUrl = (q, dest) =>
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q && q.toLowerCase().includes(dest.toLowerCase().split(',')[0]) ? q : `${q}, ${dest}`)}`;
 
+// Airbnb's real search-page format: /s/<place, with each part joined by -->/homes, with the
+// stay dates as query params when known. Built from the trip, never guessed by the model, so it
+// always lands on a live, correctly filtered page instead of a made-up or generic one.
+function airbnbSearchUrl(trip) {
+  const slug = (trip.destination || '').split(',').map((s) => s.trim().replace(/\s+/g, '-')).filter(Boolean).join('--');
+  const params = new URLSearchParams();
+  if (trip.start_date) params.set('checkin', trip.start_date);
+  if (trip.end_date) params.set('checkout', trip.end_date);
+  const qs = params.toString();
+  return `https://www.airbnb.com/s/${encodeURIComponent(slug)}/homes${qs ? `?${qs}` : ''}`;
+}
+
 export async function runGenerate(trip) {
   if ((trip.itinerary_versions || 0) >= MAX_GENERATIONS_PER_TRIP) {
     throw new Error(`This trip has reached its limit of ${MAX_GENERATIONS_PER_TRIP} itinerary versions. Raise MAX_GENERATIONS_PER_TRIP in Railway if needed.`);
@@ -458,6 +483,9 @@ RULES
 - DISCRETION: the whole group may read this. Never name anyone's disability, diagnosis, health condition, or
   allergy. Describe the arrangement instead ("step-free route", "quiet-hours entry", "menu with safe options").
 - Booking links: prefer the venue's own official site; Airbnb counts as primary for lodging; OpenTable/aggregators are backup.
+  For an Airbnb suggestion, only give a booking_url if you found a SPECIFIC real listing through search (a URL
+  containing /rooms/); if you're describing a type of place rather than one you verified exists, leave booking_url
+  empty — a search link for the area and dates is added automatically, which works better than a guessed listing.
   Treat keyword domains like [name]tickets.com or official[name].com as resellers unless proven official. Omit a
   link rather than guess one. Transport: give the mode, why, and a research note (no booking links). Default modes follow the budget tier: public transport and walking at 3-Star and below, a mix of private and public at 4-Star, private only (car with driver, private transfers) at 5-Star. A clear group preference for getting around (anything other than "Mix, no strong preference") overrides that default.
 - Flights are out of scope. Include lodging suggestions (2–3 options) as a separate "stay" list.
@@ -497,9 +525,20 @@ Omit "split" and "transport" when not needed. Use empty strings rather than inve
     (b.options || []).forEach((o) => everyOption.push({ o, category: 'activity' }));
     (b.split || []).forEach((s) => (s.options || []).forEach((o) => everyOption.push({ o, category: 'activity' })));
   }));
-  for (const { o } of everyOption) {
+  for (const { o, category } of everyOption) {
     o.maps_url = mapsUrl(o.place_query || o.name, trip.destination);
     Object.assign(o, assignTier(o.name, trip.destination));
+    // Claude sometimes names Airbnb as the right place to book a lodging suggestion but can't
+    // point to one real listing (because the suggestion is a type of place, not a specific one it
+    // verified exists) and falls back to airbnb.com's bare homepage — a real, reachable link that
+    // still leaves the traveler to search from scratch. A link containing /rooms/ is an actual
+    // listing and is left alone; anything else gets replaced with a working search already
+    // filtered to the destination and these dates, which is more useful than either the homepage
+    // or an invented listing URL that may not exist or stay live.
+    if (category === 'lodging' && /airbnb\.[a-z.]+/i.test(o.booking_url || '') && !/\/rooms\//i.test(o.booking_url)) {
+      o.booking_url = airbnbSearchUrl(trip);
+      o.booking_source = 'Airbnb (search for this area and your dates)';
+    }
   }
 
   // ── Sonnet: booking link check ──

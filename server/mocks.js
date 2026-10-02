@@ -5,7 +5,7 @@ const opt = (name) => ({ name, note: 'Test note', price_level: '€€', price_e
 export function mockResponse(step) {
   switch (step) {
     // 'sights' now stands in for the merged Stage 1 call: sights + budget snapshot together.
-    case 'sights': return { sights: [{ name: 'Colosseum', why: 'Ancient arena.', time_needed: '3 hours', book_ahead: true }, { name: 'Pantheon', why: 'Best-preserved temple.', time_needed: '1 hour', book_ahead: true }], neighborhoods: [{ name: 'Monti', character: 'Artisan quarter.' }], day_trips: [], currency: 'EUR', cost_level: 'Moderately expensive.', tiers: { three_star: { lodging_night: '€150–220', meal: '€20–35', daily_per_person: '€160–240' } }, notes: ['City tax per night.'] };
+    case 'sights': return { sights: [{ name: 'Colosseum', why: 'Ancient arena.', time_needed: '3 hours', book_ahead: true, official_site: 'https://parcocolosseo.it/en/' }, { name: 'Pantheon', why: 'Best-preserved temple.', time_needed: '1 hour', book_ahead: true, official_site: '' }], neighborhoods: [{ name: 'Monti', character: 'Artisan quarter.' }], day_trips: [], currency: 'EUR', cost_level: 'Moderately expensive.', tiers: { three_star: { lodging_night: '€150–220', meal: '€20–35', daily_per_person: '€160–240' } }, notes: ['City tax per night.'] };
     // 'price_stay' stands in for the merged lodging + transport pricing call.
     case 'price_stay': return { currency: 'EUR', hotels: { per_night_per_room: tiers(40), examples: [], notes: ['Test'] }, transit: { transport_per_person_per_day: tiers(3), key_prices: [], notes: [] } };
     // 'price_eat_do' stands in for the merged food + activities pricing call.

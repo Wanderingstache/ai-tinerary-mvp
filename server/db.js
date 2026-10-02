@@ -56,6 +56,10 @@ export async function initDb() {
       error TEXT
     );
     CREATE INDEX IF NOT EXISTS ai_calls_trip_idx ON ai_calls(trip_id);
+    -- Share Trip: lets one traveler's own invite link find their trip without a second table.
+    -- Each traveler object gets an invite_token once the organizer turns on self-answer mode;
+    -- this index makes "find the trip containing this token" fast as that list grows.
+    CREATE INDEX IF NOT EXISTS trips_travelers_gin ON trips USING GIN (travelers);
   `);
   console.log('✅ Database ready');
 }

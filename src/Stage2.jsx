@@ -6,8 +6,11 @@ import {
 } from './options.js';
 
 const money = (cur, r) => (r ? `${cur ? cur + ' ' : ''}${Number(r.low).toLocaleString()}–${Number(r.high).toLocaleString()}` : '');
+// Built the same way the finished itinerary builds its map links: a plain Google Maps search,
+// never a guessed address — no AI call, so it costs nothing and can't be wrong about the URL.
+const mapsUrl = (name, destination) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name}, ${destination}`)}`;
 
-function Framing({ trip, onRun }) {
+function Framing({ trip, onRun, promoted, onTogglePromote }) {
   const s = trip.research?.sights;
   const b = trip.research?.budget;
   return (
@@ -18,16 +21,34 @@ function Framing({ trip, onRun }) {
           <div className="glance">
             <div>
               <h3>Sights</h3>
+              <p className="fine">Add any of these as a must-do option for travelers to choose from in the next step.</p>
               <ul className="plain">
-                {s.result.sights?.map((x) => (
-                  <li key={x.name}><strong>{x.name}</strong>. {x.why}{x.book_ahead && <span className="chip">Book ahead</span>}</li>
-                ))}
+                {s.result.sights?.map((x) => {
+                  const on = promoted.includes(x.name);
+                  return (
+                    <li key={x.name}>
+                      <strong>{x.name}</strong>. {x.why}{x.book_ahead && <span className="chip">Book ahead</span>}
+                      <span className="glance__links">
+                        <a href={mapsUrl(x.name, trip.destination)} target="_blank" rel="noopener noreferrer">Map</a>
+                        {x.official_site && <a href={x.official_site} target="_blank" rel="noopener noreferrer">Official site</a>}
+                        <button type="button" className={`linkbtn ${on ? 'is-added' : ''}`} onClick={() => onTogglePromote(x.name)}>
+                          {on ? '✓ Added as an option' : '+ Add as an option'}
+                        </button>
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
             <div>
               <h3>Neighborhoods</h3>
               <ul className="plain">
-                {s.result.neighborhoods?.map((x) => <li key={x.name}><strong>{x.name}</strong>. {x.character}</li>)}
+                {s.result.neighborhoods?.map((x) => (
+                  <li key={x.name}>
+                    <strong>{x.name}</strong>. {x.character}{' '}
+                    <a href={mapsUrl(x.name, trip.destination)} target="_blank" rel="noopener noreferrer">Map</a>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
@@ -91,7 +112,11 @@ export default function Stage2({ trip, value: g, onChange, onRun, flags = {} }) 
 
   return (
     <div className="stage">
-      <Framing trip={trip} onRun={onRun} />
+      <Framing trip={trip} onRun={onRun} promoted={g.promoted_sights || []}
+        onTogglePromote={(name) => {
+          const cur = g.promoted_sights || [];
+          set({ promoted_sights: cur.includes(name) ? cur.filter((x) => x !== name) : [...cur, name] });
+        }} />
 
       <Q label="Current pricing" help={`${trip.destination} · ${dates}. See real prices before you pick a budget tier.`}>
         {!pricing && <button type="button" className="btn" onClick={() => onRun('pricing')}>Confirm & show pricing</button>}

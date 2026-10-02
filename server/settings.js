@@ -22,7 +22,11 @@ export const WEB_SEARCH_PRICE = 10 / 1000; // $10 per 1,000 searches
 export const STEPS = {
   // Stage 1's two calls (sights, budget) are asked together as one Haiku call — see
   // steps.js's startFraming — so they share one entry here and one system-prompt cost.
-  sights:        { model: 'haiku',  search: false, label: 'Stage 1 · Sights & budget snapshot' },
+  // Search is on so this step can find each sight's own official website rather than guess one —
+  // the step used to be free of search entirely; this adds a few search calls' worth of cost
+  // (roughly a handful of cents per trip) in exchange for a real, working link travelers can use
+  // right from the "at a glance" panel instead of just a name and a Map link.
+  sights:        { model: 'haiku',  search: true, maxSearches: 6, label: 'Stage 1 · Sights & budget snapshot' },
   // Stage 2's pricing check is 3 calls, not 5: lodging+transport share a call, food+activities
   // share a call, and season/context stays on its own. Same categories researched, fewer
   // system-prompt repeats.

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Q, Tiles, Text, StepStatus } from './ui.jsx';
+import { link } from './router.js';
 import {
   AGES, WHY_TYPES, HOW_BUDGET, HOW_PLAN, DINING, INTERESTS, PACE_ALIGN, AVOID, FLEXIBILITY, ACTIVITY_LEVEL, RHYTHM, FOOD_ADVENTURE,
   SOLO_TIME, OBSERVANCE, ALCOHOL, NEEDS_TYPES, PHYSICAL, NEURO, HEALTH, DIET, GLUTEN_LEVEL,
@@ -38,7 +39,9 @@ function MustDos({ value = [], onChange, tiles }) {
   );
 }
 
-function Card({ t, i, set, needsOn, tiles, skipDetails, onCopyPrev, flags }) {
+// Shared with the Share Trip invite page (InviteFlow.jsx), which uses it to show one traveler's
+// own card without any of the organizer's other controls around it.
+export function Card({ t, i, set, needsOn, tiles, skipDetails, onCopyPrev, flags }) {
   const needTypeOptions = NEEDS_TYPES.filter((n) => flags[n.key]);
   const dietOptions = DIET.filter((d) => flags.gluten || d !== 'Gluten-free / Celiac');
   const who = t.name || (i === 0 ? 'you' : `traveler ${i + 1}`);
@@ -153,13 +156,56 @@ function Card({ t, i, set, needsOn, tiles, skipDetails, onCopyPrev, flags }) {
   );
 }
 
-export default function Stage3({ trip, travelers, onChange, onRun, skipDetails, setSkipDetails, flags = {} }) {
+// Share Trip: one row per traveler, a copyable link once they have one, and whether they've
+// answered yet. No access to anyone's answers from here — that's the whole point of the mode.
+function Roster({ trip, travelers, onNameChange, onGroupPatch, onSaveRoster, onRefresh, busy }) {
+  const deadline = trip.group_answers?.response_deadline || '';
+  const today = new Date().toISOString().slice(0, 10);
+  const deadlinePassed = deadline && deadline < today;
+  const pendingCount = travelers.filter((t) => t.status !== 'done').length;
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const [copiedId, setCopiedId] = useState('');
+  const copy = async (t) => {
+    const url = `${origin}${link(`/invite/${t.invite_token}`)}`;
+    try { await navigator.clipboard.writeText(url); setCopiedId(t.id); setTimeout(() => setCopiedId(''), 2000); } catch { /* clipboard unavailable */ }
+  };
+  return (
+    <>
+      <p className="lede">Each traveler gets their own link to answer for themselves — text it, email it, however's easiest. You'll see who's answered as they do.</p>
+      <Q label="Response deadline" optional
+        help="Once this passes, it's fine to build the itinerary even if someone hasn't answered — they'll get an easygoing, flexible default. This never builds anything on its own; you still click Build when you're ready.">
+        <Text type="date" value={deadline} onChange={(v) => onGroupPatch({ response_deadline: v })} />
+        {deadlinePassed && pendingCount > 0 && <p className="note">The deadline has passed, with {pendingCount} {pendingCount === 1 ? 'person' : 'people'} still to answer. You can go ahead whenever you're ready.</p>}
+      </Q>
+      <div className="roster">
+        {travelers.map((t, i) => (
+          <div className="roster__row" key={t.id}>
+            <Text value={t.name} onChange={(v) => onNameChange(i, v)} maxLength={40} placeholder={`Traveler ${i + 1}`} />
+            <span className={`chip ${t.status === 'done' ? 'chip--done' : ''}`}>{t.status === 'done' ? 'Done' : 'Pending'}</span>
+            {t.invite_token ? (
+              <button type="button" className="btn btn--ghost btn--small" onClick={() => copy(t)}>{copiedId === t.id ? 'Copied!' : 'Copy link'}</button>
+            ) : <span className="fine">Save to create a link</span>}
+          </div>
+        ))}
+      </div>
+      <div className="row">
+        <button type="button" className="btn" onClick={onSaveRoster} disabled={busy}>{busy ? 'Saving…' : 'Save names & create links'}</button>
+        <button type="button" className="btn btn--ghost" onClick={onRefresh}>Check for updates</button>
+      </div>
+    </>
+  );
+}
+
+export default function Stage3({ trip, travelers, onChange, onRun, skipDetails, setSkipDetails, flags = {}, onGroupPatch, onSaveRoster, onRefresh, busy }) {
   const [open, setOpen] = useState(0);
   const anyNeedsOffered = flags.diet || flags.gluten || flags.physical || flags.neuro || flags.health;
   const needsOn = trip.group_answers?.needs_gate === 'yes' && anyNeedsOffered;
   const tilesStep = trip.research?.tiles;
   const missed = trip.group_answers?.been_before === 'before' && trip.group_answers?.bb_missed;
-  const tileList = [...(missed ? [missed] : []), ...(tilesStep?.result?.tiles || []).map((x) => x.label)];
+  // Sights the organizer promoted from the "at a glance" panel on the previous step join the same
+  // pool every traveler picks must-dos from, alongside the destination-specific suggestions.
+  const promotedSights = trip.group_answers?.promoted_sights || [];
+  const tileList = [...new Set([...(missed ? [missed] : []), ...promotedSights, ...(tilesStep?.result?.tiles || []).map((x) => x.label)])];
   const tiles = { step: tilesStep, list: tileList, retry: () => onRun('tiles') };
 
   const setT = (i, patch) => onChange(travelers.map((t, j) => (j === i ? { ...t, ...patch } : t)));
@@ -168,8 +214,27 @@ export default function Stage3({ trip, travelers, onChange, onRun, skipDetails, 
     setT(i, JSON.parse(JSON.stringify(rest)));
   };
 
+  const mode = trip.group_answers?.intake_mode || 'organizer';
+  const modeToggle = travelers.length > 1 && (
+    <Q label="Who answers the questions?">
+      <Tiles compact options={[{ key: 'organizer', label: "I'll answer for everyone" }, { key: 'self', label: 'Let each person answer for themselves' }]}
+        value={mode} onChange={(v) => onGroupPatch({ intake_mode: v || 'organizer' })} />
+    </Q>
+  );
+
+  if (mode === 'self' && travelers.length > 1) {
+    return (
+      <div className="stage">
+        {modeToggle}
+        <Roster trip={trip} travelers={travelers} onNameChange={(i, v) => setT(i, { name: v })}
+          onGroupPatch={onGroupPatch} onSaveRoster={onSaveRoster} onRefresh={onRefresh} busy={busy} />
+      </div>
+    );
+  }
+
   return (
     <div className="stage">
+      {modeToggle}
       <p className="lede">Fill in a card for each person. You're answering for everyone, so check with each traveler before you finish, especially about health and access needs.</p>
       <label className="check">
         <input type="checkbox" checked={skipDetails} onChange={(e) => setSkipDetails(e.target.checked)} />

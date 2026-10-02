@@ -17,4 +17,6 @@ export const api = {
   saveTrip: (id, patch) => call('PUT', `/api/trips/${id}`, patch),
   run: (id, step) => call('POST', `/api/trips/${id}/run/${step}`),
   admin: (key) => call('GET', '/api/admin/trips', null, { 'x-admin-key': key }),
+  getInvite: (token) => call('GET', `/api/invite/${token}`),
+  saveInvite: (token, traveler) => call('PUT', `/api/invite/${token}`, traveler),
 };

@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID, createHash, timingSafeEqual } from 'crypto';
 import { initDb, query, purgeFinishedTrips } from './db.js';
-import { runPricing, runTiles, runNeeds, runReviewCheck, runGenerate, startStep, startFraming, getTrip } from './steps.js';
+import { runPricing, runTiles, runNeeds, runReviewCheck, runGenerate, startStep, startFraming, getTrip, getTripByInviteToken } from './steps.js';
 import { STEPS, MAX_GENERATIONS_PER_TRIP, NEEDS } from './settings.js';
 
 const app = express();
@@ -103,7 +103,16 @@ app.put('/api/trips/:id', wrap(async (req, res) => {
     add('destination', d.destination); add('start_date', d.start_date); add('end_date', d.end_date); add('day_count', d.day_count);
   }
   if (b.group_answers) add('group_answers', JSON.stringify(b.group_answers));
-  if (b.travelers) add('travelers', JSON.stringify(b.travelers));
+  if (b.travelers) {
+    // Share Trip: once the organizer turns on "let each person answer for themselves", every
+    // traveler needs their own invite link. A token is assigned here, the moment travelers are
+    // saved in that mode, rather than needing a separate "generate links" step.
+    const mode = b.group_answers?.intake_mode ?? trip.group_answers?.intake_mode;
+    const travelers = mode === 'self'
+      ? b.travelers.map((t) => (t.invite_token ? t : { ...t, invite_token: randomUUID() }))
+      : b.travelers;
+    add('travelers', JSON.stringify(travelers));
+  }
   if (b.review) add('review', JSON.stringify(b.review));
   if (b.stage) add('stage', String(b.stage));
   if (placeChanged) sets.push(`research = '{}'::jsonb`);
@@ -114,6 +123,42 @@ app.put('/api/trips/:id', wrap(async (req, res) => {
 }));
 
 // Start an AI step. It runs in the background; the site checks back for the result.
+// Share Trip: a traveler's own link reaches only their own card — never the budget, the other
+// travelers, or anything else about the trip. Scoped deliberately, not just "the trip minus a
+// few fields", so a new trip field added later doesn't accidentally leak through here.
+const isInviteToken = (s) => /^[0-9a-f-]{36}$/i.test(s || '');
+
+app.get('/api/invite/:token', wrap(async (req, res) => {
+  if (!isInviteToken(req.params.token)) return res.status(404).json({ error: 'That link looks incomplete. Check it was copied in full.' });
+  const trip = await getTripByInviteToken(req.params.token);
+  if (!trip) return res.status(404).json({ error: "We couldn't find a trip for this link. It may have been replaced by a newer one." });
+  const traveler = (trip.travelers || []).find((t) => t.invite_token === req.params.token);
+  if (!traveler) return res.status(404).json({ error: "We couldn't find a trip for this link. It may have been replaced by a newer one." });
+  res.json({
+    destination: trip.destination, start_date: trip.start_date, end_date: trip.end_date, day_count: trip.day_count,
+    traveler,
+    tiles: trip.research?.tiles?.result?.tiles || [],
+    promoted_sights: trip.group_answers?.promoted_sights || [],
+    missed: trip.group_answers?.been_before === 'before' ? trip.group_answers?.bb_missed : null,
+    needs_gate: trip.group_answers?.needs_gate || '',
+  });
+}));
+
+app.put('/api/invite/:token', wrap(async (req, res) => {
+  if (!isInviteToken(req.params.token)) return res.status(404).json({ error: 'That link looks incomplete. Check it was copied in full.' });
+  const trip = await getTripByInviteToken(req.params.token);
+  if (!trip) return res.status(404).json({ error: "We couldn't find a trip for this link. It may have been replaced by a newer one." });
+  const idx = (trip.travelers || []).findIndex((t) => t.invite_token === req.params.token);
+  if (idx === -1) return res.status(404).json({ error: "We couldn't find a trip for this link. It may have been replaced by a newer one." });
+  const prev = trip.travelers[idx];
+  // The traveler can only change their own answers — never their id, their invite_token, or (by
+  // only ever touching this one array element) anyone else's card.
+  const next = { ...prev, ...(req.body || {}), id: prev.id, invite_token: prev.invite_token, status: 'done' };
+  const travelers = trip.travelers.map((t, i) => (i === idx ? next : t));
+  await query('UPDATE trips SET travelers = $2, updated_at = now() WHERE id = $1', [trip.id, JSON.stringify(travelers)]);
+  res.json({ ok: true, traveler: next });
+}));
+
 const RUNNERS = { pricing: runPricing, tiles: runTiles, needs: runNeeds, review_check: runReviewCheck, generate: runGenerate };
 app.post('/api/trips/:id/run/:step', wrap(async (req, res) => {
   if (!isUuid(req.params.id)) return res.status(404).json({ error: 'Unknown step' });
