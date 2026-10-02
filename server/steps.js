@@ -334,7 +334,11 @@ Return JSON:
  "lodging_guidance":["what to look for in rooms/hotels, e.g. roll-in shower, elevator, quiet floor"],
  "transit_guidance":[""],
  "unverified":[{"topic":"","why_check":""}],
- "general_tips":[""]}`, { maxTokens: 5000 });
+ "general_tips":[""]}`,
+      // Opus's reasoning is always on and shares this same ceiling, so a flat 5000 left very
+      // little room for the actual findings once thinking took its share. Scales with how many
+      // people this research has to cover.
+      { maxTokens: Math.min(24000, 6000 + accessPeople.length * 2000) });
   }
   if (dietPeople.length) {
     jobs.diet = runStep(trip.id, 'needs_diet', `
@@ -353,7 +357,10 @@ Return JSON:
 {"restaurants":[{"name":"","area":"","serves":["which needs"],"for":["names"],"evidence":"","price_level":"€/€€/€€€","source_url":""}],
  "allergy_card":[{"for":"name","local_text":"","english":""}],
  "tips":[""],
- "unverified":[{"topic":"","why_check":""}]}`, { maxTokens: 5000 });
+ "unverified":[{"topic":"","why_check":""}]}`,
+      // Same reasoning-shares-the-ceiling issue as needs_access — scales with how many people
+      // this restaurant research has to cover.
+      { maxTokens: Math.min(24000, 6000 + dietPeople.length * 2000) });
   }
   const out = { access: null, diet: null, skipped: !accessPeople.length && !dietPeople.length };
   const settled = await Promise.allSettled(Object.values(jobs));
@@ -389,10 +396,11 @@ Return JSON:
 {"must_dos":[{"item":"","for":["names"],"status":"ok|book_ahead|closed_or_seasonal|date_conflict|unknown","note":"","source_url":""}],
  "conflicts":[{"id":"c1","summary":"one sentence","involves":["names"],"suggested":"together|split_activity|split_day|drop",
    "options":{"together":"what the compromise would be","split_activity":"who does what","split_day":"how a day apart would look","drop":"what gets dropped"}}]}`,
-  // A fixed 4000 was only ever enough for a solo trip with a couple of must-dos. This scales with
-  // the group the same way the itinerary step does, so a larger group with more must-dos between
-  // them doesn't get cut off mid-answer.
-  { maxTokens: Math.min(16000, 3000 + travelerCount * 800 + mustDoCount * 150) });
+  // A fixed 4000 was only ever enough for a solo trip with a couple of must-dos — and that's
+  // before accounting for Sonnet 5's reasoning, which is always on, defaults to a "high" effort
+  // level, and shares this same ceiling with the visible answer. Scales with the group the same
+  // way the itinerary step does, with a higher floor and cap to leave room for that reasoning.
+  { maxTokens: Math.min(32000, 6000 + travelerCount * 1200 + mustDoCount * 200) });
 }
 
 // ── STAGE 5 · generate → maps + tiers (code) → link check ───────────────
@@ -404,6 +412,7 @@ export async function runGenerate(trip) {
     throw new Error(`This trip has reached its limit of ${MAX_GENERATIONS_PER_TRIP} itinerary versions. Raise MAX_GENERATIONS_PER_TRIP in Railway if needed.`);
   }
   const days = tripDays(trip);
+  const travelerCount = (trip.travelers || []).length || 1;
   const r = trip.research || {};
   const review = trip.review || {};
   const check = done(trip, 'review_check');
@@ -472,7 +481,13 @@ Return JSON only:
  "before_you_go":[""]}
 Omit "split" and "transport" when not needed. Use empty strings rather than invented URLs.`;
 
-  const maxTokens = Math.min(32000, 4000 + days * 3500);
+  // Opus 5.5's real ceiling is 128,000 output tokens, and its reasoning is always on and shares
+  // this exact ceiling with the visible JSON — Anthropic's own guidance is to leave headroom in
+  // max_tokens specifically for that reasoning. The old formula (capped at 32,000, scaled by days
+  // only) didn't budget for that at all, and left very little room once a few travelers' split
+  // days, needs, and options were added on top. This scales by group size too and leaves much
+  // more headroom, while staying well under the real ceiling.
+  const maxTokens = Math.min(100000, 8000 + days * 4500 + travelerCount * 1500);
   const itin = await runStep(trip.id, 'generate', prompt, { maxTokens });
 
   // ── Code step: Google Maps links + verification tiers ──
@@ -502,7 +517,9 @@ site is on .va). If a link is a reseller or broken and you find the official sit
 Links:
 ${urls.map((u, i) => `${i + 1}. ${u.name} (${u.category}): ${u.url}`).join('\n')}
 Return JSON: {"links":[{"url":"","verdict":"official|primary_platform|backup_platform|reseller|broken|unverified","better_url":"","reason":"short"}]}`,
-      { maxTokens: 4000 });
+      // Sonnet's reasoning shares this ceiling too, and a longer, multi-day itinerary can easily
+      // have 20–40 links to check. Scales with how many there actually are.
+      { maxTokens: Math.min(20000, 4000 + urls.length * 300) });
     } catch (e) {
       linkReport = { error: friendlyError(e), links: [] };
     }
