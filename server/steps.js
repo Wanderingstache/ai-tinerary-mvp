@@ -202,12 +202,7 @@ export async function startFraming(tripId) {
   await setResearch(tripId, 'budget', stamp);
   try {
     const r = await runStep(tripId, 'sights', framingPrompt(trip), { maxTokens: 6000 });
-    // A site link missing its "https://" (just "parcocolosseo.it/en/") looks like a path on our
-    // own site to the browser, not an outside link — clicking it lands on our own "Page not
-    // found" instead of the real site. Only keep official_site if it's a genuine, absolute
-    // http(s) link; otherwise drop it, the same "leave it out rather than show something broken"
-    // rule used everywhere else a link comes from the model rather than our own code.
-    const sights = (r.sights || []).map((s) => ({ ...s, official_site: /^https?:\/\//i.test(s.official_site || '') ? s.official_site : '' }));
+    const sights = (r.sights || []).map((s) => ({ ...s, official_site: normalizeSiteUrl(s.official_site) }));
     await setResearch(tripId, 'sights', { status: 'done', result: { sights, neighborhoods: r.neighborhoods || [], day_trips: r.day_trips || [] } });
     await setResearch(tripId, 'budget', { status: 'done', result: { currency: r.currency || '', cost_level: r.cost_level || '', tiers: r.tiers || {}, notes: r.notes || [] } });
   } catch (err) {
@@ -282,6 +277,22 @@ export async function runPricing(trip) {
 
 // Strips fields the itinerary-writing model doesn't need (source URLs, raw citation
 // lists) out of research JSON before it's pasted into a prompt — same facts, fewer tokens.
+// A search-grounded answer very often comes back as a bare domain ("parcocolosseo.it/en/"),
+// without "https://" in front — common enough that simply discarding every one of these threw
+// away nearly every real link Claude found. A browser treats a scheme-less value as a path on
+// OUR OWN site rather than an outside link, which is what caused the original "page not found"
+// bug, so this repairs anything that looks like a genuine domain (optionally with a path) into a
+// real, absolute link, and only drops something that doesn't look like a web address at all —
+// a stray sentence, a path on our own site, anything containing a space.
+function normalizeSiteUrl(v) {
+  const s = (v || '').trim();
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s)) return s;
+  if (/^\/\//.test(s)) return `https:${s}`;
+  if (!/\s/.test(s) && !s.startsWith('/') && /^[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i.test(s)) return `https://${s}`;
+  return '';
+}
+
 function stripUrls(v) {
   if (Array.isArray(v)) return v.map(stripUrls);
   if (v && typeof v === 'object') {
