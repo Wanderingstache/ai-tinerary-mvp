@@ -30,7 +30,7 @@ function Framing({ trip, onRun, promoted, onTogglePromote }) {
                       <strong>{x.name}</strong>. {x.why}{x.book_ahead && <span className="chip">Book ahead</span>}
                       <span className="glance__links">
                         <a href={mapsUrl(x.name, trip.destination)} target="_blank" rel="noopener noreferrer">Map</a>
-                        {x.official_site && <a href={x.official_site} target="_blank" rel="noopener noreferrer">Official site</a>}
+                        {/^https?:\/\//i.test(x.official_site || '') && <a href={x.official_site} target="_blank" rel="noopener noreferrer">Official site</a>}
                         <button type="button" className={`linkbtn ${on ? 'is-added' : ''}`} onClick={() => onTogglePromote(x.name)}>
                           {on ? '✓ Added as an option' : '+ Add as an option'}
                         </button>

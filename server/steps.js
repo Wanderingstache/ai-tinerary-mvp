@@ -202,7 +202,13 @@ export async function startFraming(tripId) {
   await setResearch(tripId, 'budget', stamp);
   try {
     const r = await runStep(tripId, 'sights', framingPrompt(trip), { maxTokens: 6000 });
-    await setResearch(tripId, 'sights', { status: 'done', result: { sights: r.sights || [], neighborhoods: r.neighborhoods || [], day_trips: r.day_trips || [] } });
+    // A site link missing its "https://" (just "parcocolosseo.it/en/") looks like a path on our
+    // own site to the browser, not an outside link — clicking it lands on our own "Page not
+    // found" instead of the real site. Only keep official_site if it's a genuine, absolute
+    // http(s) link; otherwise drop it, the same "leave it out rather than show something broken"
+    // rule used everywhere else a link comes from the model rather than our own code.
+    const sights = (r.sights || []).map((s) => ({ ...s, official_site: /^https?:\/\//i.test(s.official_site || '') ? s.official_site : '' }));
+    await setResearch(tripId, 'sights', { status: 'done', result: { sights, neighborhoods: r.neighborhoods || [], day_trips: r.day_trips || [] } });
     await setResearch(tripId, 'budget', { status: 'done', result: { currency: r.currency || '', cost_level: r.cost_level || '', tiers: r.tiers || {}, notes: r.notes || [] } });
   } catch (err) {
     const msg = friendlyError(err);
