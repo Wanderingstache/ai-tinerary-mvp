@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Q, Tiles, Text } from './ui.jsx';
 import { COMPOSITION, PURPOSE, SPLIT_FREQ } from './options.js';
 
@@ -6,6 +6,13 @@ import { COMPOSITION, PURPOSE, SPLIT_FREQ } from './options.js';
 export default function Stage1({ value: b, onChange }) {
   const set = (patch) => onChange({ ...b, ...patch });
   const count = Number(b.traveler_count) || 1;
+  // The "5+" field used to clamp to 5–20 on every keystroke, so typing "12" became "1" (clamped to
+  // 5), then "2" appended to that made "52" (clamped to 20) — it could only ever land on 5 or 20.
+  // These two bits of local state let the box hold whatever's actually been typed so far, and only
+  // clamp once typing is finished (on blur); the tile row reads `fivePlus`, not the live number, so
+  // the field doesn't vanish mid-type if a partial number is briefly below 5.
+  const [fivePlus, setFivePlus] = useState(count >= 5);
+  const [exactInput, setExactInput] = useState(String(count >= 5 ? count : 5));
 
   return (
     <div className="stage">
@@ -35,10 +42,25 @@ export default function Stage1({ value: b, onChange }) {
 
       <Q label="How many people are traveling?">
         <Tiles compact options={['1', '2', '3', '4', '5+']}
-          value={count >= 5 ? '5+' : String(count)}
-          onChange={(v) => set({ traveler_count: v === '5+' ? Math.max(5, count) : Number(v || 1) })} />
-        {count >= 5 && (
-          <label className="mini">Exact number<Text type="number" min={5} max={20} value={count} onChange={(v) => set({ traveler_count: Math.max(5, Math.min(20, Number(v) || 5)) })} /></label>
+          value={fivePlus ? '5+' : String(count)}
+          onChange={(v) => {
+            if (v === '5+') { const n = Math.max(5, count); setFivePlus(true); setExactInput(String(n)); set({ traveler_count: n }); }
+            else { setFivePlus(false); set({ traveler_count: Number(v || 1) }); }
+          }} />
+        {fivePlus && (
+          <label className="mini">Exact number (5–20)
+            <Text type="number" min={5} max={20} value={exactInput}
+              onChange={(v) => {
+                setExactInput(v);
+                const n = Number(v);
+                if (Number.isFinite(n) && n >= 5 && n <= 20) set({ traveler_count: n });
+              }}
+              onBlur={() => {
+                const n = Math.max(5, Math.min(20, Number(exactInput) || 5));
+                setExactInput(String(n));
+                set({ traveler_count: n });
+              }} />
+          </label>
         )}
       </Q>
 

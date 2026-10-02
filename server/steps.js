@@ -365,6 +365,8 @@ Return JSON:
 
 // ── STAGE 4 · must-do check + conflict detection (one Sonnet call) ──────
 export function runReviewCheck(trip) {
+  const travelerCount = (trip.travelers || []).length || 1;
+  const mustDoCount = (trip.travelers || []).reduce((n, t) => n + (t.must_dos || []).length, 0);
   return runStep(trip.id, 'review_check', `
 ${basicsText(trip)}
 
@@ -387,7 +389,10 @@ Return JSON:
 {"must_dos":[{"item":"","for":["names"],"status":"ok|book_ahead|closed_or_seasonal|date_conflict|unknown","note":"","source_url":""}],
  "conflicts":[{"id":"c1","summary":"one sentence","involves":["names"],"suggested":"together|split_activity|split_day|drop",
    "options":{"together":"what the compromise would be","split_activity":"who does what","split_day":"how a day apart would look","drop":"what gets dropped"}}]}`,
-  { maxTokens: 4000 });
+  // A fixed 4000 was only ever enough for a solo trip with a couple of must-dos. This scales with
+  // the group the same way the itinerary step does, so a larger group with more must-dos between
+  // them doesn't get cut off mid-answer.
+  { maxTokens: Math.min(16000, 3000 + travelerCount * 800 + mustDoCount * 150) });
 }
 
 // ── STAGE 5 · generate → maps + tiers (code) → link check ───────────────

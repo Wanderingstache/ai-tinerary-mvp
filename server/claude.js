@@ -23,7 +23,9 @@ const SHARED_SYSTEM = `You are the research and planning engine for ai-tinerary.
 a small invite-only travel operation. Voice: warm, plain-spoken, honest, practical; favors real local
 experiences over tourist traps and never oversells. Accuracy matters more than completeness: if you are
 not sure something is true, say so or leave it out. Never invent prices, opening hours, URLs, or venues.
-Respond with ONE valid JSON object only: no prose before or after, no markdown fences.`;
+Respond with ONE valid JSON object only: no prose before or after, no markdown fences. Some steps let you
+search the web — when you do, write what you learned in your own words. Never wrap any part of the output
+in <cite> tags or similar citation markup; a field's value must be plain text a traveler can read as-is.`;
 
 export function extractJson(text) {
   const cleaned = text.replace(/```json|```/g, '').trim();
@@ -31,6 +33,17 @@ export function extractJson(text) {
   const end = cleaned.lastIndexOf('}');
   if (start === -1 || end <= start) throw new Error('Claude did not return JSON');
   return JSON.parse(cleaned.slice(start, end + 1));
+}
+
+// Safety net for the instruction above: web search naturally makes Claude want to cite its
+// sources inline (<cite index="...">claim</cite>), which is right for a chat reply but breaks
+// here — a JSON field's value should be the plain claim, not markup. Strip any such tags from
+// every string in the parsed result, on every step, rather than trust the instruction alone.
+function stripCiteTags(value) {
+  if (typeof value === 'string') return value.replace(/<\/?cite[^>]*>/gi, '');
+  if (Array.isArray(value)) return value.map(stripCiteTags);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, stripCiteTags(v)]));
+  return value;
 }
 
 function costOf(model, usage, searches) {
@@ -67,7 +80,7 @@ export async function runStep(tripId, stepKey, prompt, { maxTokens = 4000 } = {}
 
   if (MOCK) {
     await new Promise((r) => setTimeout(r, 400));
-    const out = mockResponse(stepKey, prompt);
+    const out = stripCiteTags(mockResponse(stepKey, prompt));
     await logCall(tripId, stepKey, model, { input_tokens: 0, output_tokens: 0 }, 0, Date.now() - started, true);
     return out;
   }
@@ -112,7 +125,7 @@ export async function runStep(tripId, stepKey, prompt, { maxTokens = 4000 } = {}
       const content = msg.content.map((b, i, arr) => (i === arr.length - 1 ? { ...b, cache_control: cache } : b));
       messages.push({ role: 'assistant', content });
     }
-    const json = extractJson(text);
+    const json = stripCiteTags(extractJson(text));
     await logCall(tripId, stepKey, model, usage, searches, Date.now() - started, true);
     return json;
   } catch (err) {
