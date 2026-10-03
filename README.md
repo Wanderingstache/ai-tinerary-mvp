@@ -107,3 +107,23 @@ their own card — never the budget, the trip dates (beyond context), or anyone 
   whole travelers array, only the stage change.
 - `src/Stage3.jsx`'s `Card` component is shared between the organizer's view and the invite page
   (`src/InviteFlow.jsx`), so a question added to one appears in both automatically.
+
+## Closing the tab: resuming a trip
+There's no sign-in anywhere in ai-tinerary — a trip's own link is still the access, same as always.
+Two small things soften "I closed the tab and lost it":
+
+- **Remember this device** (`src/localTrip.js`): the browser quietly notes the most recent trip it
+  touched. Reopening the site offers "Still working on your trip to X?" — only works on that same
+  device/browser; a different phone has nothing to go on. Nothing to set up, on by default.
+- **Email the trip link**: a "Save your spot — email me this link" option, sent through
+  [Resend](https://resend.com). Off by default — the server returns a clear error instead of
+  pretending to send anything until it's configured:
+  1. Create a free Resend account (no credit card) and generate an API key.
+  2. In Railway → Variables, add `RESEND_API_KEY`. The sending address defaults to Resend's own
+     shared test address; to send from your own address, verify a domain in Resend and set
+     `RESEND_FROM_EMAIL` (e.g. `ai-tinerary <trips@wanderingmustache.com>`).
+  3. Until a domain is verified, Resend's shared address can only deliver to your own verified
+     email — fine for testing, not yet for real clients. Verifying `wanderingmustache.com` (the
+     same kind of DNS step as the custom domain setup above) unlocks sending to anyone.
+  Once `RESEND_API_KEY` exists, `/api/config` reports `emailEnabled: true` and the option appears
+  on every trip automatically — no further code or redeploy needed.

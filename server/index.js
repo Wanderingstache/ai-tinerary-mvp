@@ -6,6 +6,7 @@ import { randomUUID, createHash, timingSafeEqual } from 'crypto';
 import { initDb, query, purgeFinishedTrips } from './db.js';
 import { runPricing, runTiles, runNeeds, runReviewCheck, runGenerate, startStep, startFraming, getTrip, getTripByInviteToken } from './steps.js';
 import { STEPS, MAX_GENERATIONS_PER_TRIP, NEEDS } from './settings.js';
+import { emailConfigured, sendTripLinkEmail } from './email.js';
 
 const app = express();
 app.set('trust proxy', 1); // Railway sits in front of the app; this makes req.ip the visitor's address
@@ -59,7 +60,19 @@ app.post('/api/access', (req, res) => {
   if (!codeOk((req.body || {}).code)) { recordMiss(req); return res.status(403).json({ error: BAD_CODE }); }
   res.json({ ok: true });
 });
-app.get('/api/config', (req, res) => res.json({ needsAccessCode: !!ACCESS_CODE, maxVersions: MAX_GENERATIONS_PER_TRIP, needs: NEEDS }));
+app.get('/api/config', (req, res) => res.json({ needsAccessCode: !!ACCESS_CODE, maxVersions: MAX_GENERATIONS_PER_TRIP, needs: NEEDS, emailEnabled: emailConfigured() }));
+
+// Share Trip, Option B: email the organizer their own trip link, so closing the tab isn't the end
+// of the road. Does nothing but return a clear error until RESEND_API_KEY exists in Railway.
+app.post('/api/trips/:id/email-link', wrap(async (req, res) => {
+  const trip = await getTrip(req.params.id);
+  if (!trip) return res.status(404).json({ error: 'Trip not found.' });
+  const email = (req.body?.email || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: "That doesn't look like a valid email address." });
+  const url = `https://${req.get('host')}/trip/${trip.id}`;
+  await sendTripLinkEmail({ to: email, destination: trip.destination, url });
+  res.json({ ok: true });
+}));
 
 // Create a trip (Stage 1). Starts the two Stage 1 Haiku calls right away.
 app.post('/api/trips', wrap(async (req, res) => {

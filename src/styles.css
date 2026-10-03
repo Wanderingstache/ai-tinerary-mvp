@@ -118,6 +118,10 @@ h3 { font: 600 18px/1.3 var(--head); margin: 18px 0 6px; }
 .roster__row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
 .roster__row .input { flex: 1; min-width: 140px; margin: 0; }
 .note { background: rgba(184, 149, 95, 0.16); padding: 10px 14px; border-radius: 8px; font-size: 15.5px; }
+
+/* Share Trip, Option A: the "continue your trip?" banner on the home screen */
+.resume { margin: 18px 0; padding: 14px 18px; background: var(--paper); border: 2px dashed var(--rope); border-radius: 12px; }
+.resume p { margin: 0 0 8px; }
 .fine { font-size: 14px; color: var(--ink-soft); }
 .warn { color: var(--rust); font-size: 14.5px; margin: 4px 0; }
 

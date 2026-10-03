@@ -7,6 +7,7 @@ import Stage3 from './Stage3.jsx';
 import Stage4, { stage4Ready } from './Stage4.jsx';
 import Itinerary from './Itinerary.jsx';
 import InviteFlow from './InviteFlow.jsx';
+import { rememberTrip, getRememberedTrip, forgetRememberedTrip } from './localTrip.js';
 import { newTraveler } from './options.js';
 import { go, link, currentPath, isHash, isRouteHash } from './router.js';
 
@@ -70,12 +71,17 @@ function Start({ code, onRejected }) {
   const [basics, setBasics] = useState(api.previewDefaults?.basics || { date_mode: 'dates', traveler_count: 1 });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  // Share Trip, Option A: offer to resume the last trip this browser touched, rather than silently
+  // starting a new one. Dismissing it just hides the banner for this visit — it doesn't forget the
+  // trip, since the organizer might still want it later.
+  const [remembered, setRemembered] = useState(getRememberedTrip());
   const start = async () => {
     const problem = stage1Problem(basics);
     if (problem) return setError(problem);
     setBusy(true); setError('');
     try {
       const { id } = await api.createTrip(basics, code);
+      rememberTrip(id, basics.destination);
       go(`/trip/${id}`);
     } catch (e) {
       if (e.status === 403 || e.status === 429) return onRejected(e.message); // passcode no longer accepted
@@ -86,6 +92,15 @@ function Start({ code, onRejected }) {
     <main className="wrap">
       <Route stage="basics" />
       <h1 className="title">Plan a trip</h1>
+      {remembered && (
+        <aside className="resume">
+          <p>Still working on your trip to <strong>{remembered.destination}</strong>?</p>
+          <div className="row">
+            <button type="button" className="btn btn--small" onClick={() => go(`/trip/${remembered.id}`)}>Continue that trip</button>
+            <button type="button" className="btn btn--ghost btn--small" onClick={() => setRemembered(null)}>Start a new one instead</button>
+          </div>
+        </aside>
+      )}
       <p className="lede">Answer a few questions for your whole group. We research real prices, check your must-dos, and build one itinerary that works for everyone.</p>
       <Stage1 value={basics} onChange={setBasics} />
       {error && <p className="status status--error" role="alert">{error}</p>}
@@ -126,6 +141,30 @@ function NotFound() {
   );
 }
 
+// Share Trip, Option B: a small, collapsed-by-default widget offering to email the organizer their
+// own trip link. Only ever rendered when the server confirms email sending is actually turned on
+// (see TripFlow's emailEnabled), so there's nothing to click that would just fail.
+function EmailLink({ tripId }) {
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState(''); // '' | 'sending' | 'sent' | 'error'
+  const [msg, setMsg] = useState('');
+  const send = async () => {
+    setStatus('sending'); setMsg('');
+    try { await api.emailLink(tripId, email); setStatus('sent'); } catch (e) { setStatus('error'); setMsg(e.message); }
+  };
+  if (!open) return <p className="fine"><button type="button" className="linkbtn" onClick={() => setOpen(true)}>Save your spot — email me this link</button></p>;
+  if (status === 'sent') return <p className="note">Sent! Check {email} for the link.</p>;
+  return (
+    <p className="fine save-spot">
+      <input className="input" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} style={{ maxWidth: 220, display: 'inline-block' }} />
+      {' '}
+      <button type="button" className="btn btn--ghost btn--small" onClick={send} disabled={status === 'sending' || !email.trim()}>{status === 'sending' ? 'Sending…' : 'Email me this link'}</button>
+      {status === 'error' && <span className="status status--error" style={{ display: 'block' }}>{msg}</span>}
+    </p>
+  );
+}
+
 function TripFlow({ id }) {
   const [trip, setTrip] = useState(null);
   const [draft, setDraft] = useState(null); // local edits before saving
@@ -136,11 +175,13 @@ function TripFlow({ id }) {
   const pollRef = useRef(null);
   const [maxVersions, setMaxVersions] = useState(5);
   const [flags, setFlags] = useState({ physical: false, neuro: false, health: false, diet: false, gluten: true });
-  useEffect(() => { api.config().then((c) => { setMaxVersions(c.maxVersions || 5); if (c.needs) setFlags(c.needs); }).catch(() => {}); }, []);
+  const [emailEnabled, setEmailEnabled] = useState(false);
+  useEffect(() => { api.config().then((c) => { setMaxVersions(c.maxVersions || 5); if (c.needs) setFlags(c.needs); setEmailEnabled(!!c.emailEnabled); }).catch(() => {}); }, []);
 
   const load = useCallback(async () => {
     const t = await api.getTrip(id);
     setTrip(t);
+    rememberTrip(t.id, t.destination); // Share Trip, Option A: keep the "resume" pointer fresh
     return t;
   }, [id]);
 
@@ -240,6 +281,7 @@ function TripFlow({ id }) {
   return (
     <main className="wrap">
       <Route stage={view} />
+      {emailEnabled && <EmailLink tripId={id} />}
       {view === 'basics' && (
         <>
           <h1 className="title">Trip basics</h1>

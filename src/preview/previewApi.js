@@ -68,7 +68,9 @@ export const previewApi = {
       occasion: { has: true, what: 'Anniversary dinner', date: '2026-11-11' }, group_dynamic: 'split', split_freq: 'Once a day',
     },
   },
-  config: async () => ({ needsAccessCode: true, maxVersions: MAX_VERSIONS, needs: { physical: false, neuro: false, health: false, diet: false, gluten: true } }),
+  // emailEnabled is false here on purpose: the preview can't actually send an email, so it hides
+  // that option rather than pretend to — same as the real site does until Resend is set up.
+  config: async () => ({ needsAccessCode: true, maxVersions: MAX_VERSIONS, needs: { physical: false, neuro: false, health: false, diet: false, gluten: true }, emailEnabled: false }),
   access: async (code) => { await wait(250); if (!okCode(code)) throw fail(BAD_CODE, 403); return { ok: true }; },
   createTrip: async (basics, code) => {
     await wait(300);
@@ -131,6 +133,7 @@ export const previewApi = {
     persist();
     return { ok: true, traveler: clone(next) };
   },
+  emailLink: async () => { await wait(200); throw fail("Email isn't available in this preview.", 400); },
   run: async (id, step) => {
     if (!trip || id !== ID) throw fail('Trip not found', 404);
     if (!['sights', 'budget', 'pricing', 'tiles', 'needs', 'review_check', 'generate'].includes(step)) throw fail('Unknown step', 404);

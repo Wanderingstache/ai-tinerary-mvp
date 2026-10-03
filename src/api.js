@@ -19,4 +19,5 @@ export const api = {
   admin: (key) => call('GET', '/api/admin/trips', null, { 'x-admin-key': key }),
   getInvite: (token) => call('GET', `/api/invite/${token}`),
   saveInvite: (token, traveler) => call('PUT', `/api/invite/${token}`, traveler),
+  emailLink: (id, email) => call('POST', `/api/trips/${id}/email-link`, { email }),
 };
