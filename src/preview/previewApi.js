@@ -134,6 +134,7 @@ export const previewApi = {
     return { ok: true, traveler: clone(next) };
   },
   emailLink: async () => { await wait(200); throw fail("Email isn't available in this preview.", 400); },
+  emailTravelerLink: async () => { await wait(200); throw fail("Email isn't available in this preview.", 400); },
   run: async (id, step) => {
     if (!trip || id !== ID) throw fail('Trip not found', 404);
     if (!['sights', 'budget', 'pricing', 'tiles', 'needs', 'review_check', 'generate'].includes(step)) throw fail('Unknown step', 404);

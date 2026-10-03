@@ -74,6 +74,23 @@ app.post('/api/trips/:id/email-link', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// Share Trip: the organizer emailing one traveler's own invite link — distinct from the endpoint
+// above (which emails the organizer's own full trip link). The organizer reaches this through the
+// trip they already have access to; the link it sends only ever opens that one traveler's card,
+// same as the Copy Link button right next to it.
+app.post('/api/trips/:id/travelers/:travelerId/email-link', wrap(async (req, res) => {
+  const trip = await getTrip(req.params.id);
+  if (!trip) return res.status(404).json({ error: 'Trip not found.' });
+  const traveler = (trip.travelers || []).find((t) => t.id === req.params.travelerId);
+  if (!traveler) return res.status(404).json({ error: 'Traveler not found on this trip.' });
+  if (!traveler.invite_token) return res.status(400).json({ error: "This traveler doesn't have a link yet — save names first." });
+  const email = (req.body?.email || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: "That doesn't look like a valid email address." });
+  const url = `https://${req.get('host')}/invite/${traveler.invite_token}`;
+  await sendTripLinkEmail({ to: email, destination: trip.destination, url });
+  res.json({ ok: true });
+}));
+
 // Create a trip (Stage 1). Starts the two Stage 1 Haiku calls right away.
 app.post('/api/trips', wrap(async (req, res) => {
   const { access_code, basics } = req.body || {};

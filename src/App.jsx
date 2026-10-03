@@ -302,7 +302,7 @@ function TripFlow({ id }) {
         <>
           <h1 className="title">{count > 1 ? 'Travelers' : 'About you'}</h1>
           <Stage3 trip={trip} travelers={draft.travelers} onChange={set('travelers')} onRun={run} skipDetails={skipDetails} setSkipDetails={setSkipDetails} flags={flags}
-            onGroupPatch={groupPatch} onSaveRoster={saveRoster} onRefresh={load} busy={busy} />
+            onGroupPatch={groupPatch} onSaveRoster={saveRoster} onRefresh={load} busy={busy} emailEnabled={emailEnabled} />
           <Nav onBack={() => setView('group')} onNext={toReview} nextLabel="Review" busy={busy} />
         </>
       )}

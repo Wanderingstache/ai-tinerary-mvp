@@ -20,6 +20,10 @@ export async function sendTripLinkEmail({ to, destination, url }) {
     }),
   });
   if (!resp.ok) {
-    throw new Error(`The email didn't go out (error ${resp.status}). Try again in a moment, or just copy the link instead.`);
+    // Surface Resend's own reason (e.g. "domain is not verified") rather than a bare status code
+    // — the difference between "try again" and "fix the setup" matters, and guessing wastes time.
+    const body = await resp.json().catch(() => null);
+    const reason = body?.message || body?.name || '';
+    throw new Error(`The email didn't go out (${resp.status}${reason ? `: ${reason}` : ''}). Try again in a moment, or just copy the link instead.`);
   }
 }

@@ -20,4 +20,5 @@ export const api = {
   getInvite: (token) => call('GET', `/api/invite/${token}`),
   saveInvite: (token, traveler) => call('PUT', `/api/invite/${token}`, traveler),
   emailLink: (id, email) => call('POST', `/api/trips/${id}/email-link`, { email }),
+  emailTravelerLink: (id, travelerId, email) => call('POST', `/api/trips/${id}/travelers/${travelerId}/email-link`, { email }),
 };

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Q, Tiles, Text, StepStatus } from './ui.jsx';
 import { link } from './router.js';
+import { api } from './api.js';
 import {
   AGES, WHY_TYPES, HOW_BUDGET, HOW_PLAN, DINING, INTERESTS, PACE_ALIGN, AVOID, FLEXIBILITY, ACTIVITY_LEVEL, RHYTHM, FOOD_ADVENTURE,
   SOLO_TIME, OBSERVANCE, ALCOHOL, NEEDS_TYPES, PHYSICAL, NEURO, HEALTH, DIET, GLUTEN_LEVEL,
@@ -156,9 +157,31 @@ export function Card({ t, i, set, needsOn, tiles, skipDetails, onCopyPrev, flags
   );
 }
 
+// A small, collapsed-by-default "email this link" control for one traveler's row. Mirrors the
+// organizer's own EmailLink widget in App.jsx, scoped to a single traveler's invite link instead.
+function RosterEmailLink({ tripId, travelerId }) {
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState(''); // '' | 'sending' | 'sent' | 'error'
+  const [msg, setMsg] = useState('');
+  const send = async () => {
+    setStatus('sending'); setMsg('');
+    try { await api.emailTravelerLink(tripId, travelerId, email); setStatus('sent'); } catch (e) { setStatus('error'); setMsg(e.message); }
+  };
+  if (!open) return <button type="button" className="linkbtn" onClick={() => setOpen(true)}>Email</button>;
+  if (status === 'sent') return <span className="fine">Sent to {email}</span>;
+  return (
+    <span className="roster__email">
+      <input className="input" type="email" placeholder="their email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <button type="button" className="btn btn--ghost btn--small" onClick={send} disabled={status === 'sending' || !email.trim()}>{status === 'sending' ? 'Sending…' : 'Send'}</button>
+      {status === 'error' && <span className="status status--error">{msg}</span>}
+    </span>
+  );
+}
+
 // Share Trip: one row per traveler, a copyable link once they have one, and whether they've
 // answered yet. No access to anyone's answers from here — that's the whole point of the mode.
-function Roster({ trip, travelers, onNameChange, onGroupPatch, onSaveRoster, onRefresh, busy }) {
+function Roster({ trip, travelers, onNameChange, onGroupPatch, onSaveRoster, onRefresh, busy, emailEnabled }) {
   const deadline = trip.group_answers?.response_deadline || '';
   const today = new Date().toISOString().slice(0, 10);
   const deadlinePassed = deadline && deadline < today;
@@ -183,7 +206,10 @@ function Roster({ trip, travelers, onNameChange, onGroupPatch, onSaveRoster, onR
             <Text value={t.name} onChange={(v) => onNameChange(i, v)} maxLength={40} placeholder={`Traveler ${i + 1}`} />
             <span className={`chip ${t.status === 'done' ? 'chip--done' : ''}`}>{t.status === 'done' ? 'Done' : 'Pending'}</span>
             {t.invite_token ? (
-              <button type="button" className="btn btn--ghost btn--small" onClick={() => copy(t)}>{copiedId === t.id ? 'Copied!' : 'Copy link'}</button>
+              <>
+                <button type="button" className="btn btn--ghost btn--small" onClick={() => copy(t)}>{copiedId === t.id ? 'Copied!' : 'Copy link'}</button>
+                {emailEnabled && <RosterEmailLink tripId={trip.id} travelerId={t.id} />}
+              </>
             ) : <span className="fine">Save to create a link</span>}
           </div>
         ))}
@@ -196,7 +222,7 @@ function Roster({ trip, travelers, onNameChange, onGroupPatch, onSaveRoster, onR
   );
 }
 
-export default function Stage3({ trip, travelers, onChange, onRun, skipDetails, setSkipDetails, flags = {}, onGroupPatch, onSaveRoster, onRefresh, busy }) {
+export default function Stage3({ trip, travelers, onChange, onRun, skipDetails, setSkipDetails, flags = {}, onGroupPatch, onSaveRoster, onRefresh, busy, emailEnabled }) {
   const [open, setOpen] = useState(0);
   const anyNeedsOffered = flags.diet || flags.gluten || flags.physical || flags.neuro || flags.health;
   const needsOn = trip.group_answers?.needs_gate === 'yes' && anyNeedsOffered;
@@ -227,7 +253,7 @@ export default function Stage3({ trip, travelers, onChange, onRun, skipDetails, 
       <div className="stage">
         {modeToggle}
         <Roster trip={trip} travelers={travelers} onNameChange={(i, v) => setT(i, { name: v })}
-          onGroupPatch={onGroupPatch} onSaveRoster={onSaveRoster} onRefresh={onRefresh} busy={busy} />
+          onGroupPatch={onGroupPatch} onSaveRoster={onSaveRoster} onRefresh={onRefresh} busy={busy} emailEnabled={emailEnabled} />
       </div>
     );
   }
