@@ -7,7 +7,9 @@ import Stage3 from './Stage3.jsx';
 import Stage4, { stage4Ready } from './Stage4.jsx';
 import Itinerary from './Itinerary.jsx';
 import InviteFlow from './InviteFlow.jsx';
-import { rememberTrip, getRememberedTrip, forgetRememberedTrip } from './localTrip.js';
+import { rememberTrip, getRecentTrips, forgetTrip } from './localTrip.js';
+import { getSession, setSession, clearSession, onSessionChange } from './session.js';
+import { ago, tripWhen, stageLabel } from './format.js';
 import { newTraveler } from './options.js';
 import { go, link, currentPath, isHash, isRouteHash } from './router.js';
 
@@ -71,10 +73,11 @@ function Start({ code, onRejected }) {
   const [basics, setBasics] = useState(api.previewDefaults?.basics || { date_mode: 'dates', traveler_count: 1 });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  // Share Trip, Option A: offer to resume the last trip this browser touched, rather than silently
-  // starting a new one. Dismissing it just hides the banner for this visit — it doesn't forget the
-  // trip, since the organizer might still want it later.
-  const [remembered, setRemembered] = useState(getRememberedTrip());
+  // The trips this browser opened lately, newest first, so one tab left open can't hide the others.
+  // Hiding the list only hides it for this visit; "remove" forgets one trip from this device's list
+  // (the trip itself is untouched).
+  const [recent, setRecent] = useState(getRecentTrips());
+  const [hideRecent, setHideRecent] = useState(false);
   const start = async () => {
     const problem = stage1Problem(basics);
     if (problem) return setError(problem);
@@ -92,13 +95,18 @@ function Start({ code, onRejected }) {
     <main className="wrap">
       <Route stage="basics" />
       <h1 className="title">Plan a trip</h1>
-      {remembered && (
+      {recent.length > 0 && !hideRecent && (
         <aside className="resume">
-          <p>Still working on your trip to <strong>{remembered.destination}</strong>?</p>
-          <div className="row">
-            <button type="button" className="btn btn--small" onClick={() => go(`/trip/${remembered.id}`)}>Continue that trip</button>
-            <button type="button" className="btn btn--ghost btn--small" onClick={() => setRemembered(null)}>Start a new one instead</button>
-          </div>
+          <p><strong>Pick up where you left off</strong> <span className="fine">· trips opened on this device</span></p>
+          <ul className="resume__list">
+            {recent.slice(0, 5).map((t) => (
+              <li key={t.id}>
+                <a href={link(`/trip/${t.id}`)}>{t.destination}</a> <span className="fine">opened {ago(t.at)}</span>
+                <button type="button" className="linkbtn" aria-label={`Remove ${t.destination} from this list`} onClick={() => { forgetTrip(t.id); setRecent(getRecentTrips()); }}>remove</button>
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="linkbtn" onClick={() => setHideRecent(true)}>Start a new trip instead</button>
         </aside>
       )}
       <p className="lede">Answer a few questions for your whole group. We research real prices, check your must-dos, and build one itinerary that works for everyone.</p>
@@ -129,6 +137,150 @@ function Plan() {
   if (gate === 'loading') return <main className="wrap"><p className="status status--working"><span className="dot" />One moment…</p></main>;
   if (gate === 'locked') return <Gate notice={notice} onUnlock={(c) => { rememberCode(c); setCode(c); setNotice(''); setGate('open'); window.scrollTo(0, 0); }} />;
   return <Start code={code} onRejected={(msg) => { forgetCode(); setNotice(msg); setGate('locked'); }} />;
+}
+
+// ── Sign-in ("My trips") ────────────────────────────────────────────────────────────────────────
+// Optional and passwordless: you ask for a link by email, tap it, and this device is signed in. It
+// doesn't change how trips or traveler links work — it only makes your trips findable anywhere.
+function AccountBar() {
+  const [emailEnabled, setEmailEnabled] = useState(false);
+  const [email, setEmail] = useState('');
+  useEffect(() => { api.config().then((c) => setEmailEnabled(!!c.emailEnabled)).catch(() => {}); }, []);
+  useEffect(() => {
+    const check = () => {
+      if (!getSession()) return setEmail('');
+      api.me().then((r) => setEmail(r.email)).catch((e) => { if (e.status === 401) clearSession(); setEmail(''); });
+    };
+    check();
+    return onSessionChange(check);
+  }, []);
+  const signOut = () => { api.authLogout().catch(() => {}); clearSession(); };
+  if (email) {
+    return (
+      <p className="acct">Signed in as <strong>{email}</strong> · <a href={link('/trips')}>My trips</a> · <button type="button" className="linkbtn" onClick={signOut}>Sign out</button></p>
+    );
+  }
+  if (!emailEnabled) return null;
+  return <p className="acct"><a href={link('/trips')}>Sign in to find your trips</a></p>;
+}
+
+function SignInForm() {
+  const needPass = !savedCode();
+  const [email, setEmail] = useState('');
+  const [pass, setPass] = useState('');
+  const [state, setState] = useState('idle'); // idle | sending | sent
+  const [error, setError] = useState('');
+  const send = async (e) => {
+    e.preventDefault();
+    setState('sending'); setError('');
+    try {
+      const code = needPass ? pass : savedCode();
+      await api.authRequest(email, code);
+      if (needPass) rememberCode(code);
+      setState('sent');
+    } catch (err) { setError(err.message); setState('idle'); }
+  };
+  if (state === 'sent') {
+    return (
+      <div className="panel">
+        <h2 className="panel__title">Check your email</h2>
+        <p>We sent a sign-in link to <strong>{email.trim()}</strong>. Tap it on this device to finish. It works once and expires in 15 minutes.</p>
+        <p className="note">Can't find it? Look in your spam or junk folder.</p>
+        <div className="row">
+          <button type="button" className="btn btn--ghost btn--small" onClick={() => setState('idle')}>Use a different email</button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <form onSubmit={send} className="gate__form">
+      <label className="q__label" htmlFor="si-email">Your email</label>
+      <input id="si-email" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
+      {needPass && (
+        <>
+          <label className="q__label" htmlFor="si-pass">Passcode</label>
+          <input id="si-pass" className="input" type="text" value={pass} onChange={(e) => setPass(e.target.value)} autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} required />
+        </>
+      )}
+      {error && <p className="status status--error" role="alert">{error}</p>}
+      <div className="nav"><span /><button type="submit" className="btn" disabled={state === 'sending' || !email.trim()}>{state === 'sending' ? 'Sending…' : 'Email me a sign-in link'}</button></div>
+    </form>
+  );
+}
+
+function MyTrips() {
+  const [state, setState] = useState('loading'); // loading | out | ready | error
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const load = useCallback(async () => {
+    if (!getSession()) return setState('out');
+    try { setData(await api.myTrips()); setState('ready'); } catch (e) {
+      if (e.status === 401) { clearSession(); return setState('out'); }
+      setError(e.message); setState('error');
+    }
+  }, []);
+  useEffect(() => { load(); return onSessionChange(load); }, [load]);
+  if (state === 'loading') return <main className="wrap"><p className="status status--working"><span className="dot" />One moment…</p></main>;
+  if (state === 'error') return <main className="wrap"><h1 className="title">My trips</h1><p className="status status--error" role="alert">{error}</p><button type="button" className="btn btn--ghost" onClick={load}>Try again</button></main>;
+  if (state === 'out') {
+    return (
+      <main className="wrap">
+        <h1 className="title">Find your trips</h1>
+        <p className="lede">Sign in with your email to see every trip you've started, from any phone or computer. No password — we email you a link.</p>
+        <SignInForm />
+      </main>
+    );
+  }
+  const trips = data?.trips || [];
+  return (
+    <main className="wrap">
+      <h1 className="title">My trips</h1>
+      {trips.length === 0 ? (
+        <>
+          <p className="lede">No trips here yet. Trips you start while signed in show up here.</p>
+          <p className="note">Started one earlier? Open its link while you're signed in and it will be added to this list.</p>
+        </>
+      ) : (
+        <ul className="trip-list">
+          {trips.map((t) => (
+            <li key={t.id} className="trip-row">
+              <a className="trip-row__main" href={link(`/trip/${t.id}`)}><strong>{t.destination}</strong><span>{tripWhen(t)}</span></a>
+              <span className="trip-row__meta">{stageLabel(t)} · {t.traveler_count || 1} traveler{(t.traveler_count || 1) === 1 ? '' : 's'} · edited {ago(t.updated_at)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p><a className="btn" href={link('/')}>Plan a new trip</a></p>
+    </main>
+  );
+}
+
+// The page a sign-in email links to. It asks for one tap instead of signing in on load, because
+// some email apps open links in the background to scan them, which would use up the one-time link
+// before the person ever sees it.
+function SignInFinish({ token }) {
+  const [state, setState] = useState('ready'); // ready | working | error
+  const [error, setError] = useState('');
+  const finish = async () => {
+    setState('working'); setError('');
+    try { const r = await api.authVerify(token); setSession(r.session); go('/trips'); } catch (e) { setError(e.message); setState('error'); }
+  };
+  return (
+    <main className="wrap">
+      <h1 className="title">Finish signing in</h1>
+      {state === 'error' ? (
+        <>
+          <p className="status status--error" role="alert">{error}</p>
+          <p><a className="btn" href={link('/trips')}>Ask for a new link</a></p>
+        </>
+      ) : (
+        <>
+          <p className="lede">Tap the button to sign in to ai-tinerary on this device.</p>
+          <button type="button" className="btn" onClick={finish} disabled={state === 'working'}>{state === 'working' ? 'Signing in…' : 'Sign me in'}</button>
+        </>
+      )}
+    </main>
+  );
 }
 
 function NotFound() {
@@ -388,12 +540,17 @@ export default function App({ pages }) {
   if (Page) return <Page />;
   const tripMatch = path.match(/^\/trip\/([0-9a-f-]{36})/i);
   const inviteMatch = path.match(/^\/invite\/([0-9a-f-]{36})/i);
+  const signInMatch = path.match(/^\/signin\/([A-Za-z0-9_-]{43})$/);
+  const isTrips = path === '/trips';
   const isPlan = path === '/' || path === '/plan';
   return (
     <>
       <Header large={isPlan} topNav={isPlan} />
+      {(tripMatch || isPlan || isTrips) && <AccountBar />}
       {tripMatch ? <TripFlow key={path} id={tripMatch[1]} />
         : inviteMatch ? <InviteFlow key={path} token={inviteMatch[1]} />
+        : signInMatch ? <SignInFinish key={path} token={signInMatch[1]} />
+        : isTrips ? <MyTrips key={path} />
         : path.startsWith('/admin') ? <Admin />
         : isPlan ? <Plan key={path} /> : <NotFound />}
       <footer className="foot">

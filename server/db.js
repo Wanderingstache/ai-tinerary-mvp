@@ -60,6 +60,24 @@ export async function initDb() {
     -- Each traveler object gets an invite_token once the organizer turns on self-answer mode;
     -- this index makes "find the trip containing this token" fast as that list grows.
     CREATE INDEX IF NOT EXISTS trips_travelers_gin ON trips USING GIN (travelers);
+
+    -- Sign-in ("My trips"): passwordless, by emailed link. A trip belongs to whoever was signed in
+    -- when they made it, or the first signed-in person to open it. Only a SHA-256 hash of any
+    -- sign-in link or session is stored, so a copy of this table can't be used to sign in.
+    ALTER TABLE trips ADD COLUMN IF NOT EXISTS owner_email TEXT;
+    CREATE INDEX IF NOT EXISTS trips_owner_idx ON trips(owner_email);
+    CREATE TABLE IF NOT EXISTS sign_in_tokens (
+      token_hash TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at TIMESTAMPTZ
+    );
+    CREATE TABLE IF NOT EXISTS sessions (
+      token_hash TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      expires_at TIMESTAMPTZ NOT NULL
+    );
   `);
   console.log('✅ Database ready');
 }

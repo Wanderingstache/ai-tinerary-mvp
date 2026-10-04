@@ -1,7 +1,10 @@
+import { getSession } from './session.js';
+
 async function call(method, url, body, headers = {}) {
+  const session = getSession();
   const res = await fetch(url, {
     method,
-    headers: { 'Content-Type': 'application/json', ...headers },
+    headers: { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session}` } : {}), ...headers },
     body: body ? JSON.stringify(body) : undefined,
   });
   let data = {};
@@ -20,5 +23,10 @@ export const api = {
   getInvite: (token) => call('GET', `/api/invite/${token}`),
   saveInvite: (token, traveler) => call('PUT', `/api/invite/${token}`, traveler),
   emailLink: (id, email) => call('POST', `/api/trips/${id}/email-link`, { email }),
+  authRequest: (email, access_code) => call('POST', '/api/auth/request', { email, access_code }),
+  authVerify: (token) => call('POST', '/api/auth/verify', { token }),
+  authLogout: () => call('POST', '/api/auth/logout'),
+  me: () => call('GET', '/api/me'),
+  myTrips: () => call('GET', '/api/my-trips'),
   emailTravelerLink: (id, travelerId, email) => call('POST', `/api/trips/${id}/travelers/${travelerId}/email-link`, { email }),
 };

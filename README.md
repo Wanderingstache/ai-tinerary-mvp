@@ -127,3 +127,24 @@ Two small things soften "I closed the tab and lost it":
      same kind of DNS step as the custom domain setup above) unlocks sending to anyone.
   Once `RESEND_API_KEY` exists, `/api/config` reports `emailEnabled: true` and the option appears
   on every trip automatically — no further code or redeploy needed.
+
+## Signing in ("My trips")
+Optional, passwordless, and it doesn't change how trips or traveler links work — it only makes your
+trips findable from any device. Needs email sending to be on (`RESEND_API_KEY`, see above).
+
+- `/trips` — "Find your trips": enter your email and the site passcode, get a one-time link by email.
+  Once signed in, it lists your trips (destination, dates, stage, travelers, last edited).
+- The emailed link opens `/signin/<token>` and asks for one tap ("Sign me in") before using the link
+  up, because some email apps open links in the background to scan them.
+- A link works once and expires in 15 minutes; a session lasts 30 days or until "Sign out". Only
+  SHA-256 hashes of links and sessions are stored (`server/auth.js`), so a copy of the database
+  can't be used to sign in. Asking for links is limited to 5 per address per hour.
+- A trip belongs to whoever was signed in when they started it, or the first signed-in person to
+  open it (`owner_email` on `trips`). Opening someone else's trip never takes it from them, and the
+  owner's email is never sent along with the trip itself.
+- Trips made before sign-in existed attach to you the first time you open them while signed in. The
+  `/admin` page lists every trip with a link, which is the quickest way to open the old ones.
+- The home page also lists the last few trips opened on that browser (`src/localTrip.js`), with a
+  "remove" for each, so one tab left open can't hide the others.
+- Testing without sending real mail: set `EMAIL_DRY_RUN_FILE=/path/file.jsonl` and messages are
+  written there instead of sent. Never set this in Railway.

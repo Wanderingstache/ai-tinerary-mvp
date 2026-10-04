@@ -134,6 +134,12 @@ export const previewApi = {
     return { ok: true, traveler: clone(next) };
   },
   emailLink: async () => { await wait(200); throw fail("Email isn't available in this preview.", 400); },
+  // Sign-in needs real email, which a single local file can't send — so it says so, politely.
+  authRequest: async () => { await wait(200); throw fail("Sign-in isn't available in this preview.", 503); },
+  authVerify: async () => { await wait(200); throw fail("Sign-in isn't available in this preview.", 400); },
+  authLogout: async () => ({ ok: true }),
+  me: async () => { throw fail('Not signed in.', 401); },
+  myTrips: async () => { throw fail('Not signed in.', 401); },
   emailTravelerLink: async () => { await wait(200); throw fail("Email isn't available in this preview.", 400); },
   run: async (id, step) => {
     if (!trip || id !== ID) throw fail('Trip not found', 404);

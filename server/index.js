@@ -6,7 +6,8 @@ import { randomUUID, createHash, timingSafeEqual } from 'crypto';
 import { initDb, query, purgeFinishedTrips } from './db.js';
 import { runPricing, runTiles, runNeeds, runReviewCheck, runGenerate, startStep, startFraming, getTrip, getTripByInviteToken } from './steps.js';
 import { STEPS, MAX_GENERATIONS_PER_TRIP, NEEDS } from './settings.js';
-import { emailConfigured, sendTripLinkEmail } from './email.js';
+import { emailConfigured, sendTripLinkEmail, sendSignInEmail } from './email.js';
+import { normalizeEmail, validEmail, looksLikeToken, createSignInToken, redeemSignInToken, createSession, sessionEmail, destroySession, purgeExpiredAuth, allow } from './auth.js';
 
 const app = express();
 app.set('trust proxy', 1); // Railway sits in front of the app; this makes req.ip the visitor's address
@@ -32,6 +33,9 @@ const BAD_CODE = "That passcode isn't right. Check the one Wandering Mustache se
 const TOO_MANY = 'Too many tries. Please wait a few minutes and try again.';
 
 const isUuid = (s) => /^[0-9a-f-]{36}$/i.test(s || '');
+// Who owns a trip is only ever used to build someone's own "My trips" list — never sent along
+// with the trip itself, which anyone holding the trip link can open.
+const publicTrip = ({ owner_email, ...rest }) => rest;
 const wrap = (fn) => (req, res) => fn(req, res).catch((e) => {
   console.error(e);
   res.status(500).json({ error: e.message || 'Something went wrong' });
@@ -91,6 +95,57 @@ app.post('/api/trips/:id/travelers/:travelerId/email-link', wrap(async (req, res
   res.json({ ok: true });
 }));
 
+// ── Sign-in ("My trips") ────────────────────────────────────────────────────────────────────
+// Passwordless: ask for a link by email, tap it, confirm. Needs email sending to be on.
+const SIGN_IN_NOT_ON = "Sign-in by email isn't turned on for this site yet.";
+const LINK_EXPIRED = 'That sign-in link has expired or was already used. Ask for a new one.';
+
+app.post('/api/auth/request', wrap(async (req, res) => {
+  const { email: raw, access_code } = req.body || {};
+  // Same gate as starting a trip, so this can't be used to send email to strangers.
+  if (tooManyMisses(req)) return res.status(429).json({ error: TOO_MANY });
+  if (!codeOk(access_code)) { recordMiss(req); return res.status(403).json({ error: BAD_CODE }); }
+  if (!emailConfigured()) return res.status(503).json({ error: SIGN_IN_NOT_ON });
+  const email = normalizeEmail(raw);
+  if (!validEmail(email)) return res.status(400).json({ error: "That doesn't look like a valid email address." });
+  if (!allow(`email:${email}`, 5, 3600 * 1000) || !allow(`ip:${req.ip}`, 20, 3600 * 1000)) {
+    return res.status(429).json({ error: 'Too many sign-in emails requested. Please wait a while and try again.' });
+  }
+  const token = await createSignInToken(email);
+  await sendSignInEmail({ to: email, url: `${req.protocol}://${req.get('host')}/signin/${token}` });
+  res.json({ ok: true });
+}));
+
+app.post('/api/auth/verify', wrap(async (req, res) => {
+  const token = (req.body || {}).token;
+  if (!looksLikeToken(token)) return res.status(400).json({ error: LINK_EXPIRED });
+  const email = await redeemSignInToken(token);
+  if (!email) return res.status(400).json({ error: LINK_EXPIRED });
+  res.json({ session: await createSession(email), email });
+}));
+
+app.post('/api/auth/logout', wrap(async (req, res) => { await destroySession(req); res.json({ ok: true }); }));
+
+app.get('/api/me', wrap(async (req, res) => {
+  const email = await sessionEmail(req);
+  if (!email) return res.status(401).json({ error: 'Not signed in.' });
+  res.json({ email });
+}));
+
+app.get('/api/my-trips', wrap(async (req, res) => {
+  const email = await sessionEmail(req);
+  if (!email) return res.status(401).json({ error: 'Not signed in.' });
+  const r = await query(
+    `SELECT id, destination, start_date, end_date, day_count, stage, itinerary_versions,
+            -- Traveler cards only exist once the organizer reaches that step; until then, use the
+            -- number they chose when they started the trip.
+            COALESCE(NULLIF(jsonb_array_length(travelers), 0),
+                     CASE WHEN basics->>'traveler_count' ~ '^[0-9]+$' THEN (basics->>'traveler_count')::int END, 1) AS traveler_count,
+            created_at, updated_at
+     FROM trips WHERE owner_email = $1 ORDER BY updated_at DESC LIMIT 100`, [email]);
+  res.json({ email, trips: r.rows });
+}));
+
 // Create a trip (Stage 1). Starts the two Stage 1 Haiku calls right away.
 app.post('/api/trips', wrap(async (req, res) => {
   const { access_code, basics } = req.body || {};
@@ -100,9 +155,10 @@ app.post('/api/trips', wrap(async (req, res) => {
   if (!d.destination) return res.status(400).json({ error: 'Enter a destination to continue.' });
   if (d.start_date && d.end_date && d.end_date < d.start_date) return res.status(400).json({ error: 'The end date is before the start date.' });
   const id = randomUUID();
+  const owner = await sessionEmail(req); // null when not signed in — trips work fine without it
   await query(
-    `INSERT INTO trips (id, destination, start_date, end_date, day_count, basics, stage) VALUES ($1,$2,$3,$4,$5,$6,'basics')`,
-    [id, d.destination, d.start_date, d.end_date, d.day_count, JSON.stringify(basics || {})]
+    `INSERT INTO trips (id, destination, start_date, end_date, day_count, basics, stage, owner_email) VALUES ($1,$2,$3,$4,$5,$6,'basics',$7)`,
+    [id, d.destination, d.start_date, d.end_date, d.day_count, JSON.stringify(basics || {}), owner]
   );
   kickOffStage1(id);
   res.json({ id });
@@ -112,7 +168,12 @@ app.get('/api/trips/:id', wrap(async (req, res) => {
   if (!isUuid(req.params.id)) return res.status(404).json({ error: 'Trip not found' });
   const trip = await getTrip(req.params.id);
   if (!trip) return res.status(404).json({ error: 'Trip not found. Check the link.' });
-  res.json(trip);
+  // Opening a trip while signed in adds it to that person's "My trips" — but only if nobody owns
+  // it yet, so this can never take a trip away from someone. (Holding the trip link already
+  // means full access to it; this just makes it findable later.)
+  const me = await sessionEmail(req);
+  if (me && !trip.owner_email) await query(`UPDATE trips SET owner_email = $2 WHERE id = $1 AND owner_email IS NULL`, [trip.id, me]);
+  res.json(publicTrip(trip));
 }));
 
 // Save answers. If destination or dates change, Stage 1 research reruns.
@@ -146,10 +207,10 @@ app.put('/api/trips/:id', wrap(async (req, res) => {
   if (b.review) add('review', JSON.stringify(b.review));
   if (b.stage) add('stage', String(b.stage));
   if (placeChanged) sets.push(`research = '{}'::jsonb`);
-  if (!sets.length) return res.json(trip);
+  if (!sets.length) return res.json(publicTrip(trip));
   await query(`UPDATE trips SET ${sets.join(', ')}, updated_at = now() WHERE id = $1`, vals);
   if (placeChanged) kickOffStage1(trip.id);
-  res.json(await getTrip(trip.id));
+  res.json(publicTrip(await getTrip(trip.id)));
 }));
 
 // Start an AI step. It runs in the background; the site checks back for the result.
@@ -239,8 +300,9 @@ app.get(/^\/(?!api\/).*/, (req, res) => res.sendFile(path.join(dist, 'index.html
 const PORT = process.env.PORT || 3000;
 initDb()
   .then(() => purgeFinishedTrips())
+  .then(() => purgeExpiredAuth())
   .catch((e) => console.error('Database setup failed:', e.message))
   .finally(() => {
-    setInterval(() => purgeFinishedTrips().catch(() => {}), 6 * 60 * 60 * 1000);
+    setInterval(() => { purgeFinishedTrips().catch(() => {}); purgeExpiredAuth().catch(() => {}); }, 6 * 60 * 60 * 1000);
     app.listen(PORT, '0.0.0.0', () => console.log(`🚀 ai-tinerary running on port ${PORT}`));
   });
