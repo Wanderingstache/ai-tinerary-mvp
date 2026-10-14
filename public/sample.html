@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="One city, two honeymoons. A sample ai-tinerary: four days in Paris for two very different couples, built around who they are, not who pays us.">
+<link rel="icon" href="/favicon.png">
+<link rel="stylesheet" href="/brand.css">
+<title>ai-tinerary | Sample: Two Honeymoons, One Paris</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --ink: #2a2622; --body: #4a4640; --soft: #6b6660; --gold: #d4a574; --link: #85622d;
+  --line: rgba(212,165,116,0.3); --card: rgba(255,255,255,0.75);
+  --a: #16314f; --b: #8a4a3a;
+  --stached: #a98a55; --scouted: #3f6f96; --vetted: #4f7a4a; --aied: #9a3f2c;
+}
+body { background: linear-gradient(135deg, #f5ede3 0%, #faf7f2 100%); color: var(--body); line-height: 1.6; font-family: Merriweather, Georgia, serif; }
+.masthead { text-align: center; padding: 28px 16px 8px; }
+.nav { text-align: center; padding: 20px 8px; border-bottom: 1px solid rgba(212,165,116,0.2); }
+.nav a { color: var(--link); text-decoration: none; font-size: 14px; margin: 0 14px; border-bottom: 1px solid transparent; display: inline-block; padding: 4px 0; }
+.nav a:hover { border-bottom-color: var(--link); }
+.nav a.active { color: var(--ink); border-bottom-color: var(--ink); }
+.container { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+a { color: var(--link); }
+a:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+header { text-align: center; padding: 44px 0 28px; }
+.eyebrow { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: var(--link); margin-bottom: 14px; }
+h1 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(36px, 6vw, 56px); color: var(--ink); line-height: 1.12; margin-bottom: 14px; }
+.tagline { font-style: italic; color: var(--soft); font-size: 17px; max-width: 640px; margin: 0 auto; }
+.divider { width: 80px; height: 1px; background: var(--gold); margin: 32px auto; }
+.lede { max-width: 760px; margin: 0 auto; font-size: 16.5px; line-height: 1.85; }
+.lede p + p { margin-top: 16px; }
+.lede strong { color: var(--ink); }
+.sample-flag { max-width: 760px; margin: 28px auto 0; padding: 14px 18px; border: 1px dashed var(--gold); background: rgba(255,255,255,0.6); font-size: 13.5px; color: var(--soft); }
+h2 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(28px, 4vw, 40px); color: var(--ink); text-align: center; line-height: 1.2; margin-bottom: 10px; }
+.h2-sub { text-align: center; font-style: italic; color: var(--soft); margin-bottom: 32px; font-size: 15px; }
+section { margin: 64px 0; }
+
+/* Couples */
+.couples { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.couple { background: var(--card); border: 1px solid var(--line); border-top: 5px solid var(--a); padding: 26px 26px 22px; }
+.couple--b { border-top-color: var(--b); }
+.couple h3 { font-family: 'Playfair Display', Georgia, serif; font-size: 26px; color: var(--ink); line-height: 1.2; margin-bottom: 4px; }
+.couple .label { font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; font-weight: 700; color: var(--a); margin-bottom: 8px; display: block; }
+.couple--b .label { color: var(--b); }
+.types { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 14px; }
+.type { font-size: 12px; border: 1px solid currentColor; padding: 3px 9px; border-radius: 999px; color: var(--a); background: #fff; }
+.couple--b .type { color: var(--b); }
+.type b { font-weight: 700; }
+.couple p { font-size: 14.5px; line-height: 1.75; }
+.couple ul { list-style: none; margin-top: 10px; font-size: 14px; }
+.couple li { padding: 4px 0 4px 18px; position: relative; }
+.couple li::before { content: '▪'; position: absolute; left: 2px; color: var(--gold); }
+
+/* Honesty box */
+.honest { background: #16314f; color: #ece9e3; padding: 34px 32px; border-left: 6px solid var(--gold); }
+.honest h2 { color: #ece9e3; text-align: left; font-size: clamp(24px, 3.4vw, 32px); }
+.honest p { font-size: 15.5px; line-height: 1.8; margin-top: 12px; color: rgba(236,233,227,0.92); }
+.honest strong { color: #fff; }
+
+/* Stamps */
+.stamp { display: inline-block; font-family: Georgia, serif; font-size: 10.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 2px 7px; border: 1.5px solid currentColor; border-radius: 3px; transform: rotate(-2deg); background: #fff; white-space: nowrap; vertical-align: 2px; margin-left: 4px; }
+.s-stached { color: var(--stached); } .s-scouted { color: var(--scouted); } .s-vetted { color: var(--vetted); } .s-aied { color: var(--aied); }
+.legend { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.legend div { background: var(--card); border: 1px solid var(--line); padding: 16px; font-size: 13.5px; line-height: 1.6; }
+.legend .stamp { margin: 0 0 8px; }
+
+/* Days */
+.day { margin-bottom: 34px; }
+.day-head { display: flex; align-items: baseline; gap: 14px; border-bottom: 1px solid var(--gold); padding-bottom: 8px; margin-bottom: 14px; }
+.day-head h3 { font-family: 'Playfair Display', Georgia, serif; font-size: 24px; color: var(--ink); }
+.day-head span { font-size: 13px; color: var(--soft); font-style: italic; }
+.day-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.plan { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--a); padding: 16px 18px; }
+.plan--b { border-left-color: var(--b); }
+.plan .who { font-size: 10.5px; letter-spacing: 2.5px; text-transform: uppercase; font-weight: 700; color: var(--a); margin-bottom: 8px; display: block; }
+.plan--b .who { color: var(--b); }
+.plan ol { list-style: none; }
+.plan li { padding: 9px 0; border-top: 1px dotted rgba(212,165,116,0.5); font-size: 14px; line-height: 1.65; }
+.plan li:first-child { border-top: 0; padding-top: 0; }
+.plan .t { display: block; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--soft); margin-bottom: 2px; }
+.plan .why { display: block; font-style: italic; color: var(--soft); font-size: 13px; margin-top: 3px; }
+.plan .open { display: block; font-style: italic; color: var(--b); font-size: 13.5px; }
+
+/* Compare table */
+.compare { width: 100%; border-collapse: collapse; background: var(--card); font-size: 14px; }
+.compare th, .compare td { border: 1px solid var(--line); padding: 12px 14px; vertical-align: top; text-align: left; line-height: 1.6; }
+.compare thead th { font-family: 'Playfair Display', Georgia, serif; font-size: 17px; color: #fff; background: var(--a); }
+.compare thead th:last-child { background: var(--b); }
+.compare thead th:first-child { background: #3d3a34; }
+.compare tbody th { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink); width: 18%; }
+.compare .total td { font-weight: 700; color: var(--ink); }
+.fine { font-size: 12.5px; color: var(--soft); margin-top: 10px; font-style: italic; }
+
+/* CTA */
+.cta-block { text-align: center; margin: 72px 0 56px; }
+.cta-block p { font-size: 17px; margin-bottom: 26px; color: var(--body); }
+.cta-button { display: inline-block; padding: 16px 40px; background: #3d3a34; color: #faf7f2; text-decoration: none; font-weight: 700; border: 2px solid #3d3a34; }
+.cta-button:hover { background: transparent; color: #3d3a34; }
+.cta-block .beta-note { font-size: 13px; color: var(--soft); margin: 18px 0 0; }
+footer { text-align: center; padding: 48px 0; color: #8a8480; font-size: 13px; border-top: 1px solid rgba(212,165,116,0.2); }
+footer a { color: var(--link); text-decoration: none; }
+
+@media (max-width: 800px) {
+  .couples, .day-grid { grid-template-columns: 1fr; }
+  .legend { grid-template-columns: 1fr 1fr; }
+  .honest { padding: 28px 22px; }
+  .compare thead { display: none; }
+  .compare, .compare tbody, .compare tr, .compare th, .compare td { display: block; width: 100%; }
+  .compare tr { margin-bottom: 14px; border: 1px solid var(--line); }
+  .compare tbody th { background: #3d3a34; color: #fff; border: 0; }
+  .compare td { border: 0; border-top: 1px solid var(--line); }
+  .compare td::before { display: block; font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; margin-bottom: 3px; }
+  .compare td:nth-of-type(1)::before { content: 'Couple A'; color: var(--a); }
+  .compare td:nth-of-type(2)::before { content: 'Couple B'; color: var(--b); }
+}
+@media (max-width: 480px) { .legend { grid-template-columns: 1fr; } .nav a { margin: 0 8px; } }
+</style>
+</head>
+<body>
+<div class="masthead">
+  <div class="brand brand--lg">
+    <img src="/logo.png" width="556" height="480" alt="ai-tinerary.com, brought to you by the Wandering Mustache">
+    <a class="brand__home" href="/"><span class="sr">ai-tinerary home</span></a>
+    <a class="brand__wm" href="https://www.wanderingmustache.com" target="_blank" rel="noopener noreferrer" title="Visit wanderingmustache.com"><span class="sr">Visit Wandering Mustache (opens in a new tab)</span></a>
+  </div>
+</div>
+<nav class="nav" aria-label="Main">
+  <a href="/">Plan a trip</a>
+  <a href="/sample" class="active">Sample trip</a>
+  <a href="/truth">The Truth</a>
+  <a href="/about">How it works</a>
+  <a href="https://www.wanderingmustache.com" target="_blank" rel="noopener noreferrer">Wandering Mustache</a>
+</nav>
+
+<div class="container">
+<header>
+  <p class="eyebrow">Sample itinerary</p>
+  <h1>Two Honeymoons, One Paris</h1>
+  <p class="tagline">Same city. Same four days in May. Two couples who would be miserable on each other's trip.</p>
+</header>
+
+<div class="lede">
+  <p>Most "Paris honeymoon itineraries" are the same list in a different font. That's because most of them are built around what the planner gets paid for, or what everyone else already booked. <strong>ai-tinerary starts with who you are.</strong> Why you travel. How you spend. How you plan.</p>
+  <p>So here's the test. Two newlywed couples. Same city, same four days in mid-May, Wednesday to Saturday. Only their traveler types are different. Watch what changes.</p>
+</div>
+<p class="sample-flag">The couples are made up. The places are real, and every price, opening day and link on this page was checked against the official source in October 2026. Prices change; the real tool re-checks them when it builds your trip.</p>
+
+<section aria-labelledby="meet">
+  <h2 id="meet">Meet the Newlyweds</h2>
+  <p class="h2-sub">Types come from the <a href="https://www.wanderingmustache.com/traveler-types" target="_blank" rel="noopener noreferrer">Wandering Mustache traveler quiz</a>. Your why, plus how you spend and how you plan.</p>
+  <div class="couples">
+    <article class="couple">
+      <span class="label">Couple A</span>
+      <h3>The Champagne Checklist</h3>
+      <div class="types">
+        <span class="type">Why: <b>Collector</b></span>
+        <span class="type">Leans: <b>Reminiscer</b></span>
+        <span class="type">Spend: <b>Lux Life</b></span>
+        <span class="type">Plan: <b>Deep Diver</b></span>
+      </div>
+      <p>They want the big ones, all of them, in a sensible order, with the tickets already in the inbox. Mona Lisa, Hall of Mirrors, Eiffel Tower summit. They will pay to skip a line and pay more not to stand in a crowd. And every big moment should come with a story they can retell at the fiftieth anniversary.</p>
+      <ul>
+        <li>Five-star hotel, cars and drivers</li>
+        <li>Every slot booked before takeoff</li>
+        <li>One "remember when" moment a day</li>
+      </ul>
+    </article>
+    <article class="couple couple--b">
+      <span class="label">Couple B</span>
+      <h3>The Stairs, Not the Lift</h3>
+      <div class="types">
+        <span class="type">Why: <b>Adventurer</b></span>
+        <span class="type">Spend: <b>Thrifty Drifter</b></span>
+        <span class="type">Plan: <b>Choose-Your-Own-Adventure</b></span>
+      </div>
+      <p>They'd rather climb 674 steps than pay extra for an elevator, and they'll brag about it at dinner. They want one or two big anchors a day and nothing else scheduled. The deal is part of the fun. So is getting a little lost, a little sore, and a little sunburned on a rock in a forest.</p>
+      <ul>
+        <li>Cheap, clean bed in a lived-in neighborhood</li>
+        <li>Bikes, trains and their own two feet</li>
+        <li>Anchors only. Afternoons left blank on purpose.</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section class="honest" aria-labelledby="money">
+  <h2 id="money">Nobody Paid to Be on This Page</h2>
+  <p>Every recommendation below was chosen for the couple. None was chosen because it pays us. <strong>None of these links earns us a cent</strong>; they all go straight to the hotel, restaurant or ticket office. Where we've reviewed it in person, the stamp says so. Where we haven't, the stamp says that too.</p>
+  <p>Down the road, ai-tinerary will offer to book some things for you. When it does, the commission shows up on the quote before you say yes, and the recommendation comes first, always. We pick the place, then we check whether it pays. Never the other way around. <a href="/about#money" style="color:#ece9e3;">Who pays us, in full</a>.</p>
+</section>
+
+<section aria-labelledby="stamps">
+  <h2 id="stamps">Who Checked It</h2>
+  <p class="h2-sub">Every place gets a stamp, so you know how much to trust it.</p>
+  <div class="legend">
+    <div><span class="stamp s-stached">Stached</span><br>Reviewed in person by the Staches. Good, bad or expensive mistake, the verdict is ours.</div>
+    <div><span class="stamp s-scouted">Scouted</span><br>A trusted travel companion went for us and reported back.</div>
+    <div><span class="stamp s-vetted">Vetted</span><br>Researched by She-Stache, pinned on our map, not yet visited.</div>
+    <div><span class="stamp s-aied">AI-ed</span><br>Found and checked by the machine. Official sources only, but nobody we know has stood there.</div>
+  </div>
+</section>
+
+<section aria-labelledby="days">
+  <h2 id="days">Four Days, Side by Side</h2>
+  <p class="h2-sub">Wednesday to Saturday, chosen on purpose: the Louvre closes Tuesdays, and Versailles and the Catacombs close Mondays.</p>
+
+  <div class="day">
+    <div class="day-head"><h3>Day 1 · Wednesday</h3><span>Arrival day</span></div>
+    <div class="day-grid">
+      <div class="plan"><span class="who">Couple A</span><ol>
+        <li><span class="t">Arrive</span>Private transfer to <a href="https://www.pavillon-de-la-reine.com/" target="_blank" rel="noopener">Le Pavillon de la Reine</a> <span class="stamp s-vetted">Vetted</span>, five stars behind an ivy courtyard on the <a href="https://www.google.com/maps/search/?api=1&query=Place+des+Vosges+Paris" target="_blank" rel="noopener">Place des Vosges</a>.<span class="why">It's the hotel the Staches say they'd book next time, after booking the wrong one. Le Marais keeps the good restaurants close.</span></li>
+        <li><span class="t">Afternoon</span>Monet's Water Lilies at the <a href="https://www.musee-orangerie.fr/en" target="_blank" rel="noopener">Musée de l'Orangerie</a> <span class="stamp s-vetted">Vetted</span> (€12.50 online), then a slow walk through the <a href="https://www.google.com/maps/search/?api=1&query=Jardin+des+Tuileries+Paris" target="_blank" rel="noopener">Tuileries</a>.<span class="why">A gentle first-day box to tick. The Staches over-booked a Louvre day and missed this one. Couple A won't.</span></li>
+        <li><span class="t">Break</span>One hot chocolate at <a href="https://salon-de-the.angelina-paris.fr/en/pastry-shop/rue-de-rivoli-paris-1/" target="_blank" rel="noopener">Angelina</a> <span class="stamp s-stached">Stached</span> on the Rue de Rivoli.<span class="why">Order one and share it. It's essentially a melted dessert, and you have dinner tonight.</span></li>
+        <li><span class="t">Evening</span>The <a href="https://www.louvre.fr/en" target="_blank" rel="noopener">Louvre</a> <span class="stamp s-stached">Stached</span> late opening (Wednesdays until 9 p.m.; €32 for non-EU visitors). Timed tickets, a map plan, and the big three: Mona Lisa, Venus de Milo, Winged Victory.<span class="why">Collectors get the checklist. Deep Divers get the route planned in advance, because the Louvre punishes improvisers.</span></li>
+      </ol></div>
+      <div class="plan plan--b"><span class="who">Couple B</span><ol>
+        <li><span class="t">Arrive</span>RER B into the city on the €14 airport ticket. Stay in a small two- or three-star hotel near the <a href="https://www.google.com/maps/search/?api=1&query=Canal+Saint-Martin+Paris" target="_blank" rel="noopener">Canal Saint-Martin</a> <span class="stamp s-aied">AI-ed</span>.<span class="why">The tool names specific hotels at build time from live prices. A lived-in neighborhood, not a postcard one, for a lot less money.</span></li>
+        <li><span class="t">Afternoon</span>A 24-hour <a href="https://www.velib-metropole.fr/en" target="_blank" rel="noopener">Vélib'</a> pass (€5 classic bikes) and a ride along the canal and down to the Seine.<span class="open">Then nothing. That's the plan.</span></li>
+        <li><span class="t">Evening · Anchor</span>Climb the <a href="https://www.toureiffel.paris/en" target="_blank" rel="noopener">Eiffel Tower</a> <span class="stamp s-stached">Stached</span>: 674 steps to the second floor for €14.80. The lift costs €23.50.<span class="why">Thrifty and Adventurer in one ticket. They save €8.70 each and earn the bragging rights.</span></li>
+        <li><span class="t">After dark</span>Watch it sparkle for five minutes on the hour. Free, from anywhere with a view.</li>
+      </ol></div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="day-head"><h3>Day 2 · Thursday</h3><span>The day trip</span></div>
+    <div class="day-grid">
+      <div class="plan"><span class="who">Couple A</span><ol>
+        <li><span class="t">Morning</span>Car and driver to the <a href="https://en.chateauversailles.fr/" target="_blank" rel="noopener">Palace of Versailles</a> <span class="stamp s-stached">Stached</span> on a Passport ticket (€35 non-EU in high season). Hall of Mirrors, then the gardens.<span class="why">The biggest box on the Collector's list. A driver means no fighting the RER on the way back.</span></li>
+        <li><span class="t">Lunch</span><a href="https://xavier-pincemin.com" target="_blank" rel="noopener">Le Pincemin</a> <span class="stamp s-stached">Stached</span> in town, the Staches' splurge after their own Versailles day. Closed Sundays and Mondays.<span class="why">Creative French cooking, and the chef came out to meet the table. That's a Reminiscer story waiting to happen.</span></li>
+        <li><span class="t">Evening</span><a href="https://www.bateauxparisiens.com/en/meal-cruise/dinner-cruise.html" target="_blank" rel="noopener">Bateaux Parisiens</a> <span class="stamp s-stached">Stached</span> dinner cruise from the foot of the Eiffel Tower. Take the 8:30 p.m. sailing (2½ hours, €99–245) so you're on the river when the tower lights up.<span class="why">The cruise that stole the Staches' own Paris trip.</span></li>
+      </ol></div>
+      <div class="plan plan--b"><span class="who">Couple B</span><ol>
+        <li><span class="t">All day · Anchor</span>Train from Gare de Lyon to Fontainebleau-Avon on line R (€2.55 each way) and spend the day bouldering in the <a href="https://www.fontainebleau-tourisme.com/fr/decouvrir-la-region/loisirs-de-pleine-nature/destination-dexception-pour-lescalade/" target="_blank" rel="noopener">Forest of Fontainebleau</a> <span class="stamp s-aied">AI-ed</span>. Rent a crash pad in town.<span class="why">One of the most famous bouldering forests in the world is a short train ride from Paris, and a single metro ticket covers the fare. That's catnip for this couple.</span></li>
+        <li><span class="t">Lunch</span>A picnic on a rock. Buy it in Paris before the train.</li>
+        <li><span class="t">Evening</span><span class="open">Back in the city, sore and happy. Dinner wherever they land.</span></li>
+      </ol></div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="day-head"><h3>Day 3 · Friday</h3><span>Old Paris</span></div>
+    <div class="day-grid">
+      <div class="plan"><span class="who">Couple A</span><ol>
+        <li><span class="t">9 a.m.</span><a href="https://www.sainte-chapelle.fr/en" target="_blank" rel="noopener">Sainte-Chapelle</a> <span class="stamp s-aied">AI-ed</span> at opening (€22 non-EU), before the crowds block the light.</li>
+        <li><span class="t">Late morning</span><a href="https://www.notredamedeparis.fr/en/" target="_blank" rel="noopener">Notre-Dame</a> <span class="stamp s-aied">AI-ed</span>, a short walk away. Entry is free; book a free timed slot anyway.<span class="why">Two of Paris's biggest names before lunch, no queuing.</span></li>
+        <li><span class="t">Lunch</span><a href="https://www.rosemariebistrotparis.com" target="_blank" rel="noopener">Rosemarie</a> <span class="stamp s-stached">Stached</span> in the 7th. Weekday lunch only, so Friday is the day.<span class="why">Excellent food, and extremely accommodating when the Staches brought their parents.</span></li>
+        <li><span class="t">Late afternoon</span><a href="https://www.toureiffel.paris/en" target="_blank" rel="noopener">Eiffel Tower</a> <span class="stamp s-stached">Stached</span> by lift to the summit, with a glass at the summit Champagne Bar (€60.70 together as one ticket).<span class="why">The toast they'll still be describing at 80. Book the slot when tickets open; they go.</span></li>
+        <li><span class="t">Night</span>The <a href="https://www.lecrazyhorseparis.com/en/" target="_blank" rel="noopener">Crazy Horse</a> <span class="stamp s-stached">Stached</span> cabaret with the champagne package (€125). Dress up; no trainers.<span class="why">Very Paris, very much not the Moulin Rouge, and a story you'll tell carefully at family dinners.</span></li>
+      </ol></div>
+      <div class="plan plan--b"><span class="who">Couple B</span><ol>
+        <li><span class="t">Morning · Anchor</span>The <a href="https://www.catacombes.paris.fr/en" target="_blank" rel="noopener">Catacombs</a> <span class="stamp s-aied">AI-ed</span>: 131 steps down, 112 back up and 1.5 km of bones (€31 with audioguide). Book ahead.</li>
+        <li><span class="t">Lunch</span>Picnic supplies on <a href="https://www.google.com/maps/search/?api=1&query=Rue+Cler+Paris" target="_blank" rel="noopener">Rue Cler</a> <span class="stamp s-stached">Stached</span>: baguette, cheese, fruit, a bottle, a bench.<span class="why">Better than most cafés at a fraction of the price, and the money goes to the family shops.</span></li>
+        <li><span class="t">Afternoon</span><span class="open">Wander the 7th. If they pass 140 Rue du Bac, the</span> <a href="https://www.chapellenotredamedelamedaillemiraculeuse.com/" target="_blank" rel="noopener">Chapel of Our Lady of the Miraculous Medal</a> <span class="stamp s-stached">Stached</span> is quiet, gilded and a working chapel, so voices down. Then the <a href="https://www.quaibranly.fr/en/" target="_blank" rel="noopener">quai Branly</a> <span class="stamp s-stached">Stached</span> living wall, viewable for free from the street.</li>
+        <li><span class="t">Evening</span>The <a href="https://www.google.com/maps/search/?api=1&query=Cour+Napoleon+Louvre+Paris" target="_blank" rel="noopener">Louvre courtyard</a> <span class="stamp s-stached">Stached</span> at dusk, from the outside.<span class="why">Free, gorgeous, no queue. If the Friday happens to be the first of the month, the Louvre itself is free from 6 p.m.; book a slot.</span></li>
+      </ol></div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="day-head"><h3>Day 4 · Saturday</h3><span>Up the hill, then the farewell dinner</span></div>
+    <div class="day-grid">
+      <div class="plan"><span class="who">Couple A</span><ol>
+        <li><span class="t">Morning</span>Up to <a href="https://www.sacre-coeur-montmartre.com/en/" target="_blank" rel="noopener">Sacré-Cœur</a> <span class="stamp s-stached">Stached</span> on the <a href="https://www.ratp.fr/en/discover/heritage/history-montmartre-funicular" target="_blank" rel="noopener">Montmartre funicular</a> (one metro ticket). The basilica is free.<span class="why">Keep your hands in your pockets on the steps. The friendship-bracelet guys are persistent.</span></li>
+        <li><span class="t">Lunch</span><a href="http://www.alearestaurant.com" target="_blank" rel="noopener">Aléa</a> <span class="stamp s-stached">Stached</span>, a tiny Montmartre bistro that did not disappoint.</li>
+        <li><span class="t">Afternoon</span>The food hall on the 7th floor of <a href="https://www.printemps.com/fr/fr/printemps-paris-haussmann" target="_blank" rel="noopener">Printemps Haussmann</a> <span class="stamp s-stached">Stached</span>, for edible souvenirs.</li>
+        <li><span class="t">Farewell dinner</span><a href="https://restaurantlapetitelune.com" target="_blank" rel="noopener">La Petite Lune</a> <span class="stamp s-stached">Stached</span> in the 6th. The Staches' best meal in Paris, found by getting lost.<span class="why">Book it. The Staches stumbled in. Deep Divers don't stumble.</span></li>
+      </ol></div>
+      <div class="plan plan--b"><span class="who">Couple B</span><ol>
+        <li><span class="t">Early · Optional</span>A run on the <a href="https://www.paris.fr/lieux/coulee-verte-rene-dumont-1772" target="_blank" rel="noopener">Coulée verte René-Dumont</a> <span class="stamp s-aied">AI-ed</span>, a 4.5 km park built on an old railway line.</li>
+        <li><span class="t">Morning · Anchor</span>Climb the <a href="https://www.tours-notre-dame-de-paris.fr/" target="_blank" rel="noopener">Notre-Dame towers</a> <span class="stamp s-aied">AI-ed</span>: 424 steps, no lift, €16, and free if you're under 26. Book online; it's the only way in.<span class="why">Gargoyles at eye level. The best view-per-euro in Paris if you're young enough to get it free.</span></li>
+        <li><span class="t">Afternoon</span>Walk up <a href="https://www.google.com/maps/search/?api=1&query=Rue+des+Martyrs+Paris" target="_blank" rel="noopener">Rue des Martyrs</a> <span class="stamp s-stached">Stached</span>, eating as you go, then 280 more steps to the <a href="https://www.sacre-coeur-montmartre.com/en/info-and-visits/the-dome-tour/" target="_blank" rel="noopener">Sacré-Cœur dome</a> <span class="stamp s-aied">AI-ed</span> (€8).<span class="why">Two climbs in one day. On a honeymoon. This couple is fine.</span></li>
+        <li><span class="t">Farewell dinner</span><a href="https://restaurantlapetitelune.com" target="_blank" rel="noopener">La Petite Lune</a> <span class="stamp s-stached">Stached</span>, same as Couple A.<span class="why">Some places are right for everyone. The wine list is priced for people who live there, which suits a Thrifty Drifter perfectly.</span></li>
+      </ol></div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="changed">
+  <h2 id="changed">What Changed, and Why</h2>
+  <p class="h2-sub">Same city, same days. Different people, different trip.</p>
+  <table class="compare">
+    <thead><tr><th scope="col">&nbsp;</th><th scope="col">Couple A · Collector, Lux Life, Deep Diver</th><th scope="col">Couple B · Adventurer, Thrifty Drifter, CYOA</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Where they sleep</th><td>Five stars in Le Marais. Pay for location and calm.</td><td>Two or three stars by the canal. Pay for a bed, live outside.</td></tr>
+      <tr><th scope="row">Getting around</th><td>Private transfers and cars. Their time is the luxury.</td><td>RER, metro, Vélib', feet. The getting there is part of the trip.</td></tr>
+      <tr><th scope="row">Eiffel Tower</th><td>Lift to the summit, champagne at the top.</td><td>674 stairs to the second floor, €8.70 saved each.</td></tr>
+      <tr><th scope="row">The day trip</th><td>Versailles, Hall of Mirrors, a chef's table lunch.</td><td>Fontainebleau, a crash pad and a forest of boulders.</td></tr>
+      <tr><th scope="row">Planning</th><td>Every slot booked before takeoff, with routes.</td><td>One or two anchors a day. Afternoons blank on purpose.</td></tr>
+      <tr><th scope="row">What they keep</th><td>Stories. The toast, the cabaret, the chef.</td><td>Sore legs and a summit count.</td></tr>
+      <tr><th scope="row">Shared</th><td colspan="2" style="text-align:center;">La Petite Lune. Some places are just right.</td></tr>
+      <tr class="total"><th scope="row">Tickets, per person</th><td>About €390–535, cruise depending</td><td>About €108 with the airport train both ways, plus crash-pad rental</td></tr>
+    </tbody>
+  </table>
+  <p class="fine">Ticket totals are non-EU adult prices from the official sites as of October 2026, for the attractions, shows, transit passes and bike pass named above. They leave out hotels, meals, cars and the crash pad. Neither couple's total includes a single commission, because there isn't one.</p>
+</section>
+
+<section class="honest" aria-labelledby="flaw">
+  <h2 id="flaw">The Flaw, Because There's Always One</h2>
+  <p>This page was built and checked by hand. The real tool is AI, and AI will occasionally recommend a place that closed last month. That's why every place carries a stamp, and why the tool re-checks hours, prices and closures each time it builds a trip. One example from this page: the Marché des Enfants Rouges, the oldest covered market in Paris, would have been on this page, until a fire closed it in October 2026. It stays off until it reopens.</p>
+  <p><strong>Trust the Stached places most. Double-check the AI-ed ones.</strong> We'd say the same about any travel advice, including ours.</p>
+</section>
+
+<div class="cta-block">
+  <p>Want one built for you?</p>
+  <a class="cta-button" href="/">Request a Passcode</a>
+  <p class="beta-note">ai-tinerary is invite-only while we work out the bugs. Join the list and we'll tell you when it opens.</p>
+</div>
+
+<footer>
+  <p>Created by <a href="https://www.wanderingmustache.com" target="_blank" rel="noopener noreferrer">Wandering Mustache</a>: anti-influencer travel for the discerning traveler.</p>
+  <p style="margin-top: 14px; font-size: 12px;">© 2026 ai-tinerary. Recommendations are never for sale. Every commission is disclosed.</p>
+</footer>
+</div>
+</body>
+</html>

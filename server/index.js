@@ -57,6 +57,23 @@ function kickOffStage1(id) {
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
+// Waitlist: "No passcode? Get on the list." Saves an email (plus an optional name and dream
+// destination) so passcodes can go out by hand later. The same email twice is a no-op, not an error.
+// A hidden "website" field catches simple bots; a visitor can join at most 5 times per 10 minutes.
+const joins = new Map(); // ip -> { n, reset }
+app.post('/api/waitlist', wrap(async (req, res) => {
+  const { email = '', name = '', note = '', website = '' } = req.body || {};
+  if (website) return res.json({ ok: true });
+  const r = joins.get(req.ip);
+  if (r && r.reset > Date.now() && r.n >= 5) return res.status(429).json({ error: TOO_MANY });
+  if (!r || r.reset < Date.now()) joins.set(req.ip, { n: 1, reset: Date.now() + 10 * 60 * 1000 }); else r.n += 1;
+  const clean = String(email).trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean) || clean.length > 200) return res.status(400).json({ error: 'That email address doesn\'t look right.' });
+  await query(`INSERT INTO waitlist (email, name, note) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING`,
+    [clean, String(name).trim().slice(0, 120) || null, String(note).trim().slice(0, 500) || null]);
+  res.json({ ok: true });
+}));
+
 // The passcode gateway asks this before showing the intake.
 app.post('/api/access', (req, res) => {
   if (!ACCESS_CODE) return res.json({ ok: true, open: true });
@@ -279,7 +296,8 @@ app.get('/api/admin/trips', wrap(async (req, res) => {
            SUM(CASE WHEN ok THEN 0 ELSE 1 END)::int AS failures
     FROM ai_calls GROUP BY step, model ORDER BY cost_usd DESC`);
   const labels = Object.fromEntries(Object.entries(STEPS).map(([k, v]) => [k, v.label]));
-  res.json({ trips: trips.rows, steps: bySteps.rows.map((r) => ({ ...r, label: labels[r.step] || r.step })) });
+  const waitlist = await query(`SELECT created_at, email, name, note FROM waitlist ORDER BY created_at DESC LIMIT 500`);
+  res.json({ trips: trips.rows, steps: bySteps.rows.map((r) => ({ ...r, label: labels[r.step] || r.step })), waitlist: waitlist.rows });
 }));
 
 // The website (built by `npm run build` into /dist).
@@ -288,11 +306,13 @@ const dist = path.join(__dirname, '..', 'dist');
 // Travel" lives at /truth and "Travel on Your Terms" at /about.
 app.get('/truth', (req, res) => res.sendFile(path.join(dist, 'truth.html')));
 app.get('/about', (req, res) => res.sendFile(path.join(dist, 'landing.html')));
+app.get('/sample', (req, res) => res.sendFile(path.join(dist, 'sample.html')));
 // Old addresses keep working.
 app.get('/plan', (req, res) => res.redirect(301, '/'));
 app.get('/truth.html', (req, res) => res.redirect(301, '/truth'));
 app.get('/index.html', (req, res) => res.redirect(301, '/about'));
 app.get('/landing.html', (req, res) => res.redirect(301, '/about'));
+app.get('/sample.html', (req, res) => res.redirect(301, '/sample'));
 app.use(express.static(dist, { index: false }));
 // Everything else (/, /trip/…, /admin) is the app.
 app.get(/^\/(?!api\/).*/, (req, res) => res.sendFile(path.join(dist, 'index.html')));

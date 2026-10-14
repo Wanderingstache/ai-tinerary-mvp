@@ -72,6 +72,14 @@ export async function initDb() {
       expires_at TIMESTAMPTZ NOT NULL,
       used_at TIMESTAMPTZ
     );
+    -- Waitlist: people asking for a passcode from the front door. One row per email address.
+    CREATE TABLE IF NOT EXISTS waitlist (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      email TEXT NOT NULL UNIQUE,
+      name TEXT,
+      note TEXT
+    );
     CREATE TABLE IF NOT EXISTS sessions (
       token_hash TEXT PRIMARY KEY,
       email TEXT NOT NULL,

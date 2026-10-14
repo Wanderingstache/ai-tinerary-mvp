@@ -17,6 +17,7 @@ function Option({ o }) {
         <span className={`tier tier--${(o.verification_tier || 'AI-ed').replace(/[^a-z]/gi, '')}`} title={o.verification_voice}>{o.verification_tier || 'AI-ed'}</span>
       </div>
       {o.note && <p className="opt__note">{o.note}</p>}
+      {(o.our_take || o.client_feedback) && <p className="opt__note opt__take"><b>{o.verification_tier === 'Scouted' ? 'Our scouts say:' : 'Our take:'}</b> {o.our_take || o.client_feedback}</p>}
       {o.price_shift_warning && <p className="warn">Prices have shifted; confirm this rate before booking.</p>}
       {[o.accessibility_note, o.dietary_note, o.loyalty_note].filter(Boolean).map((n) => <p key={n} className="opt__note opt__note--need">{n}</p>)}
       <p className="opt__links">

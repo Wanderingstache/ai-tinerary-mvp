@@ -72,6 +72,7 @@ export const previewApi = {
   // that option rather than pretend to — same as the real site does until Resend is set up.
   config: async () => ({ needsAccessCode: true, maxVersions: MAX_VERSIONS, needs: { physical: false, neuro: false, health: false, diet: false, gluten: true }, emailEnabled: false }),
   access: async (code) => { await wait(250); if (!okCode(code)) throw fail(BAD_CODE, 403); return { ok: true }; },
+  waitlist: async () => { await wait(300); return { ok: true }; },
   createTrip: async (basics, code) => {
     await wait(300);
     if (!okCode(code)) throw fail(BAD_CODE, 403);

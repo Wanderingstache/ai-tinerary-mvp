@@ -15,6 +15,7 @@ async function call(method, url, body, headers = {}) {
 export const api = {
   config: () => call('GET', '/api/config'),
   access: (code) => call('POST', '/api/access', { code }),
+  waitlist: (body) => call('POST', '/api/waitlist', body),
   createTrip: (basics, access_code) => call('POST', '/api/trips', { basics, access_code }),
   getTrip: (id) => call('GET', `/api/trips/${id}`),
   saveTrip: (id, patch) => call('PUT', `/api/trips/${id}`, patch),

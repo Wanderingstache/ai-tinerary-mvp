@@ -3,298 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Travel on your terms. ai-tinerary builds honest, personal itineraries with no middlemen and no hidden markups, from Wandering Mustache.">
+    <meta name="description" content="How ai-tinerary works: an itinerary built around why you travel, how you spend and how you plan. Recommendations are never for sale, and every commission is disclosed. From Wandering Mustache.">
     <link rel="icon" href="/favicon.png">
     <link rel="stylesheet" href="/brand.css">
-    <title>ai-tinerary | Travel on Your Terms</title>
+    <title>ai-tinerary | How It Works</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #f5ede3 0%, #faf7f2 100%);
-            color: #3d3a34;
-            line-height: 1.6;
-        }
-        
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 0 24px;
-        }
-        
-        .nav {
-            text-align: center;
-            padding: 24px 0;
-            font-family: Merriweather, Georgia, serif;
-            border-bottom: 1px solid rgba(212, 165, 116, 0.2);
-        }
-        
-        .nav a {
-            color: #d4a574;
-            text-decoration: none;
-            font-size: 14px;
-            letter-spacing: 0.5px;
-            margin: 0 16px;
-            border-bottom: 1px solid transparent;
-            transition: all 0.3s ease;
-        }
-        
-        .nav a:hover {
-            border-bottom-color: #d4a574;
-        }
-        
-        .nav a.active {
-            color: #3d3a34;
-            border-bottom: 1px solid #3d3a34;
-        }
-        
-        header {
-            text-align: center;
-            padding: 60px 0 40px;
-        }
-        
-        .logo {
-            max-width: 360px;
-            height: auto;
-            margin: 0 auto 48px;
-            display: block;
-        }
-        
-        h1 {
-            font-family: 'Playfair Display', Georgia, serif;
-            font-size: 56px;
-            font-weight: 700;
-            margin-bottom: 12px;
-            color: #2a2622;
-            line-height: 1.15;
-            letter-spacing: -0.5px;
-        }
-        
-        .tagline {
-            font-family: Merriweather, Georgia, serif;
-            font-size: 18px;
-            color: #666;
-            font-style: italic;
-            margin-bottom: 48px;
-            font-weight: 400;
-        }
-        
-        .divider {
-            width: 80px;
-            height: 1px;
-            background: #d4a574;
-            margin: 0 auto 48px;
-        }
-        
-        .hero-text {
-            font-family: Merriweather, Georgia, serif;
-            font-size: 18px;
-            line-height: 1.8;
-            margin-bottom: 60px;
-            max-width: 780px;
-            margin-left: auto;
-            margin-right: auto;
-            color: #4a4640;
-        }
-        
-        .hero-text strong {
-            color: #2a2622;
-            font-weight: 700;
-        }
-        
-        .section {
-            margin: 80px 0;
-            padding: 60px 40px;
-            background: rgba(255, 255, 255, 0.7);
-            border: 1px solid rgba(212, 165, 116, 0.3);
-            position: relative;
-        }
-        
-        .section::before {
-            content: '✦';
-            position: absolute;
-            top: -28px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 20px;
-            color: #d4a574;
-        }
-        
-        .section h2 {
-            font-family: 'Playfair Display', Georgia, serif;
-            font-size: 42px;
-            font-weight: 700;
-            margin-bottom: 32px;
-            color: #2a2622;
-            text-align: center;
-            line-height: 1.2;
-        }
-        
-        .section-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 48px;
-            align-items: start;
-        }
-        
-        .content-block h3 {
-            font-family: 'Playfair Display', Georgia, serif;
-            font-size: 22px;
-            font-weight: 700;
-            color: #3d3a34;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            line-height: 1.3;
-        }
-        
-        .content-block p {
-            font-family: Merriweather, Georgia, serif;
-            font-size: 15px;
-            line-height: 1.8;
-            margin-bottom: 16px;
-            color: #5a5550;
-        }
-        
-        .content-block ul {
-            list-style: none;
-            padding-left: 0;
-            font-family: Merriweather, Georgia, serif;
-        }
-        
-        .content-block li {
-            font-size: 15px;
-            padding: 8px 0 8px 24px;
-            color: #5a5550;
-            position: relative;
-            line-height: 1.6;
-        }
-        
-        .content-block li::before {
-            content: '▪';
-            position: absolute;
-            left: 8px;
-            color: #d4a574;
-        }
-        
-        .icon-symbol {
-            font-size: 24px;
-            color: #d4a574;
-        }
-        
-        .cta-block {
-            text-align: center;
-            margin: 80px 0 60px;
-        }
-        
-        .cta-block p {
-            font-family: Merriweather, Georgia, serif;
-            font-size: 18px;
-            margin-bottom: 32px;
-            color: #4a4640;
-        }
-        
-        .cta-button {
-            display: inline-block;
-            padding: 18px 48px;
-            background: #3d3a34;
-            color: #faf7f2;
-            text-decoration: none;
-            font-family: Merriweather, Georgia, serif;
-            font-size: 16px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            border: 2px solid #3d3a34;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .cta-button:hover {
-            background: transparent;
-            color: #3d3a34;
-        }
-        
-        /* The optional quiz link under step 1 */
-        .step-note { margin-top: 12px; font-size: 14.5px; font-style: italic; }
-        .step-note a { color: #85622d; text-decoration: none; border-bottom: 1px solid #85622d; }
-        .step-note a:hover { color: #3d3a34; border-bottom-color: #3d3a34; }
-        .step-note a:focus-visible { outline: 3px solid #d4a574; outline-offset: 3px; }
-
-        .secondary-cta {
-            display: inline-block;
-            margin-top: 24px;
-            color: #d4a574;
-            text-decoration: none;
-            font-family: Merriweather, Georgia, serif;
-            font-size: 14px;
-            letter-spacing: 0.3px;
-            border-bottom: 1px solid #d4a574;
-            transition: all 0.3s ease;
-        }
-        
-        .secondary-cta:hover {
-            color: #3d3a34;
-            border-bottom-color: #3d3a34;
-        }
-        
-        footer {
-            text-align: center;
-            padding: 60px 0;
-            color: #8a8480;
-            font-family: Merriweather, Georgia, serif;
-            font-size: 13px;
-            border-top: 1px solid rgba(212, 165, 116, 0.2);
-        }
-        
-        footer a {
-            color: #d4a574;
-            text-decoration: none;
-        }
-        
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 42px;
-            }
-            
-            .logo {
-                max-width: 280px;
-            }
-            
-            .section h2 {
-                font-size: 32px;
-            }
-            
-            .section-content {
-                grid-template-columns: 1fr;
-                gap: 32px;
-            }
-            
-            .section {
-                padding: 40px 24px;
-                margin: 60px 0;
-            }
-            
-            .hero-text {
-                font-size: 16px;
-            }
-        }
-    </style>
-    <style>
-        /* Added when the pages moved into the app: shared logo header, readable link color, beta note */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: linear-gradient(135deg, #f5ede3 0%, #faf7f2 100%); color: #3d3a34; line-height: 1.6; font-family: Merriweather, Georgia, serif; }
+        .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
         .masthead { text-align: center; padding: 28px 16px 8px; }
-        .nav a { color: #85622d; }
-        .secondary-cta, footer a { color: #85622d; }
-        .secondary-cta { border-bottom-color: #85622d; }
-        header { padding-top: 44px; }
+        .nav { text-align: center; padding: 20px 8px; border-bottom: 1px solid rgba(212, 165, 116, 0.2); }
+        .nav a { color: #85622d; text-decoration: none; font-size: 14px; margin: 0 14px; border-bottom: 1px solid transparent; display: inline-block; padding: 4px 0; }
+        .nav a:hover { border-bottom-color: #85622d; }
+        .nav a.active { color: #3d3a34; border-bottom-color: #3d3a34; }
+        a { color: #85622d; }
+        a:focus-visible { outline: 3px solid #d4a574; outline-offset: 3px; }
+        header { text-align: center; padding: 44px 0 32px; }
+        h1 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(38px, 6vw, 56px); font-weight: 700; margin-bottom: 12px; color: #2a2622; line-height: 1.15; }
+        .tagline { font-size: 18px; color: #666; font-style: italic; }
+        .divider { width: 80px; height: 1px; background: #d4a574; margin: 0 auto 40px; }
+        .hero-text { font-size: 17px; line-height: 1.85; max-width: 760px; margin: 0 auto 56px; color: #4a4640; }
+        .hero-text p + p { margin-top: 18px; }
+        .hero-text strong { color: #2a2622; }
+        .section { margin: 72px 0; padding: 52px 40px; background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(212, 165, 116, 0.3); position: relative; }
+        .section::before { content: '✦'; position: absolute; top: -28px; left: 50%; transform: translateX(-50%); font-size: 20px; color: #d4a574; }
+        .section h2 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(30px, 4.5vw, 42px); font-weight: 700; margin-bottom: 12px; color: #2a2622; text-align: center; line-height: 1.2; }
+        .section .sub { text-align: center; font-style: italic; color: #6b6660; margin-bottom: 32px; font-size: 15px; }
+        .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
+        .block h3 { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; color: #3d3a34; margin-bottom: 12px; display: flex; align-items: baseline; gap: 12px; line-height: 1.3; }
+        .block p { font-size: 15px; line-height: 1.8; margin-bottom: 14px; color: #5a5550; }
+        .num { font-size: 24px; color: #d4a574; }
+        .block ul { list-style: none; }
+        .block li { font-size: 15px; padding: 7px 0 7px 22px; color: #5a5550; position: relative; line-height: 1.6; }
+        .block li::before { content: '▪'; position: absolute; left: 6px; color: #d4a574; }
+        .flaw { margin-top: 8px; padding: 12px 16px; border-left: 3px solid #9a3f2c; background: rgba(154, 63, 44, 0.05); font-size: 14px; line-height: 1.7; color: #5a5550; }
+        .flaw b { color: #9a3f2c; }
+        .money { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+        .money th, .money td { border: 1px solid rgba(212, 165, 116, 0.4); padding: 14px; text-align: left; vertical-align: top; line-height: 1.6; }
+        .money thead th { background: #3d3a34; color: #faf7f2; font-family: 'Playfair Display', Georgia, serif; font-size: 16px; }
+        .money tbody th { width: 26%; color: #2a2622; }
+        .money tbody th small { display: block; font-weight: 400; font-style: italic; color: #6b6660; font-size: 12.5px; margin-top: 4px; }
+        .steps { list-style: none; counter-reset: s; max-width: 680px; margin: 0 auto; }
+        .steps li { position: relative; padding: 0 0 26px 54px; font-size: 15px; line-height: 1.75; color: #5a5550; }
+        .steps li::before { counter-increment: s; content: counter(s); position: absolute; left: 0; top: -2px; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid #d4a574; text-align: center; line-height: 34px; font-family: 'Playfair Display', Georgia, serif; color: #85622d; background: #fff; }
+        .steps li b { color: #2a2622; display: block; font-size: 16px; }
+        .steps li.now::before { background: #3d3a34; color: #faf7f2; border-color: #3d3a34; }
+        .now-tag { font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase; color: #9a3f2c; margin-left: 6px; }
+        .cta-block { text-align: center; margin: 72px 0 56px; }
+        .cta-block p { font-size: 18px; margin-bottom: 28px; color: #4a4640; }
+        .cta-button { display: inline-block; padding: 16px 40px; background: #3d3a34; color: #faf7f2; text-decoration: none; font-size: 16px; font-weight: 700; border: 2px solid #3d3a34; margin: 4px 6px; }
+        .cta-button:hover { background: transparent; color: #3d3a34; }
+        .cta-button--ghost { background: transparent; color: #3d3a34; }
+        .cta-button--ghost:hover { background: #3d3a34; color: #faf7f2; }
         .cta-block .beta-note { font-size: 13px; color: #6b6660; margin: 20px 0 0; }
-        .cta-button:focus-visible, .nav a:focus-visible, .secondary-cta:focus-visible, footer a:focus-visible { outline: 3px solid #d4a574; outline-offset: 3px; }
+        footer { text-align: center; padding: 56px 0; color: #8a8480; font-size: 13px; border-top: 1px solid rgba(212, 165, 116, 0.2); }
+        footer a { color: #85622d; text-decoration: none; }
+        @media (max-width: 768px) {
+            .grid2 { grid-template-columns: 1fr; gap: 28px; }
+            .section { padding: 40px 22px; margin: 60px 0; }
+            .hero-text { font-size: 16px; }
+            .money thead { display: none; }
+            .money, .money tbody, .money tr, .money th, .money td { display: block; width: 100%; }
+            .money tr { margin-bottom: 14px; }
+            .money tbody th { background: #3d3a34; color: #faf7f2; }
+            .money tbody th small { color: rgba(250,247,242,0.8); }
+            .money td::before { display: block; font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; color: #85622d; margin-bottom: 2px; }
+            .money td:nth-of-type(1)::before { content: 'Who pays'; }
+            .money td:nth-of-type(2)::before { content: 'What it never buys'; }
+            .nav a { margin: 0 8px; }
+        }
     </style>
 </head>
 <body>
@@ -307,6 +85,7 @@
     </div>
     <nav class="nav" aria-label="Main">
         <a href="/">Plan a trip</a>
+        <a href="/sample">Sample trip</a>
         <a href="/truth">The Truth</a>
         <a href="/about" class="active">How it works</a>
         <a href="https://www.wanderingmustache.com" target="_blank" rel="noopener noreferrer">Wandering Mustache</a>
@@ -314,77 +93,85 @@
 
     <div class="container">
         <header>
-            
-            <h1>Travel on Your Terms</h1>
-            <p class="tagline">Reclaim what was lost. Restore what matters.</p>
+            <h1>How It Works</h1>
+            <p class="tagline">An itinerary built around you, not around who pays the planner.</p>
         </header>
-        
+
         <div class="divider"></div>
-        
+
         <div class="hero-text">
-            <p>There was a time when travel agents listened first and planned second. When your preferences mattered more than their commission. When a trip meant something <strong>you</strong> designed—not what fit into their margin structure.</p>
-            <p style="margin-top: 24px;">That world doesn't have to be gone. We built <strong>ai-tinerary</strong> to bring it back.</p>
+            <p>We're the Staches, the obsessive researchers behind <a href="https://www.wanderingmustache.com" target="_blank" rel="noopener noreferrer">Wandering Mustache</a>. We've spent years building trips the hard way: forty-seven open tabs, a map with a few hundred pins, and a running list of our own expensive mistakes.</p>
+            <p><strong>ai-tinerary is that process, taught to a machine.</strong> You tell it who's traveling and why. It does the research, checks it against official sources and our own maps, and hands you a day-by-day plan with every link going straight to the hotel, restaurant or ticket office.</p>
+            <p>It is not a travel agent. It won't steer you toward whatever pays best, and it won't pretend a place is wonderful because it's popular.</p>
         </div>
-        
+
         <div class="section">
-            <h2>The Problem We Solve</h2>
-            <div class="section-content">
-                <div class="content-block">
-                    <h3><span class="icon-symbol">✗</span> The Old Way</h3>
+            <h2>Four Steps</h2>
+            <p class="sub">You answer the questions. The machine does the homework.</p>
+            <div class="grid2">
+                <div class="block">
+                    <h3><span class="num">1</span> Tell it who's going</h3>
+                    <p>Dates, budget, and a card for each traveler: why they travel, how they spend, how they plan, what they must see, and what they'd rather skip entirely. Everyone can fill in their own card from their own phone.</p>
+                    <p>Not sure what type you are? <a href="https://wanderingmustache.com/traveler-types" target="_blank" rel="noopener noreferrer">Take the Wandering Mustache traveler quiz<span class="sr"> (opens in a new tab)</span></a> first. It's optional, and a little rude.</p>
+                </div>
+                <div class="block">
+                    <h3><span class="num">2</span> It does the homework</h3>
+                    <p>It researches sights, prices, seasons and opening days, then checks your must-dos against each other and against the calendar. The Louvre closes on Tuesdays; it knows.</p>
+                </div>
+                <div class="block">
+                    <h3><span class="num">3</span> You get a plan, with receipts</h3>
+                    <p>A day-by-day itinerary with a stamp on every place, so you know how much to trust it:</p>
                     <ul>
-                        <li>Recommendations built on commission, not fit</li>
-                        <li>Hidden markups buried in every booking</li>
-                        <li>You take what you're offered</li>
-                        <li>No transparency. No power.</li>
+                        <li><b>Stached:</b> reviewed in person by us. Good or bad, the verdict is ours.</li>
+                        <li><b>Scouted:</b> a trusted travel companion went for us.</li>
+                        <li><b>Vetted:</b> researched by us, not yet visited.</li>
+                        <li><b>AI-ed:</b> found by the machine, checked against official sources.</li>
                     </ul>
                 </div>
-                <div class="content-block">
-                    <h3><span class="icon-symbol">✓</span> The ai-tinerary Way</h3>
-                    <ul>
-                        <li>Itineraries built on your personality, not profit margins</li>
-                        <li>Complete transparency—no hidden costs</li>
-                        <li>You decide what you want and where you spend</li>
-                        <li>Book directly. Full control. No middleman.</li>
-                    </ul>
+                <div class="block">
+                    <h3><span class="num">4</span> You book it, direct</h3>
+                    <p>Every link goes to the vendor's own site. No booking platforms skimming the middle, no resold "private tour" at five times the ticket price. Change anything, rebuild, and it's yours.</p>
+                    <p class="flaw"><b>The flaw:</b> it's AI. Now and then it will suggest a restaurant that closed in March. That's what the stamps are for. Trust the Stached places most and double-check the AI-ed ones.</p>
                 </div>
             </div>
+            <p style="text-align:center; margin-top: 20px; font-size: 15px;">Want to see one? <a href="/sample">Two honeymoons, one Paris</a>: same city, same four days, two couples who would hate each other's trip.</p>
         </div>
-        
+
+        <div class="section" id="money">
+            <h2>Who Pays Us</h2>
+            <p class="sub">The short answer: never the place we're recommending.</p>
+            <table class="money">
+                <thead><tr><th scope="col">&nbsp;</th><th scope="col">Who pays</th><th scope="col">What it never buys</th></tr></thead>
+                <tbody>
+                    <tr><th scope="row">Wandering Mustache<small>The travel brags</small></th><td>Nobody. We pay for our own trips. If we ever get a discount, it's in the Full Disclosure box at the top of that brag.</td><td>A review, a link, or a kinder adjective.</td></tr>
+                    <tr><th scope="row">ai-tinerary<small>This tool</small></th><td>Free during beta and for invited early users. At public launch, your first itinerary is free and later ones carry a small flat fee. The fee pays for the AI behind it, and we'll publish what each itinerary actually costs us to run.</td><td>A place on your itinerary. Hotels, restaurants and tour companies pay ai-tinerary nothing.</td></tr>
+                    <tr><th scope="row">Booking with the Staches<small>Optional, later</small></th><td>If you'd rather we book some of it for you, the supplier pays us a commission. You'll see the commission on the quote before you say yes. Book with us and your ai-tinerary fee comes back to you, or goes to the scholarship fund. Your call.<br><small style="display:block;margin-top:8px;color:#6b6660;">Wendigo Consulting LLC, d/b/a The Wandering Mustache, is registered with the State of Florida as a Seller of Travel. Registration No. ST45154. Bonded, insured and IATAN certified.</small></td><td>The recommendation. We pick the place first, then check whether it pays. Never the other way around.</td></tr>
+                </tbody>
+            </table>
+            <p style="margin-top: 18px; font-size: 14px; color: #5a5550; line-height: 1.75;">Anything left over after the costs funds scholarships for young volunteers and the local projects we support when we travel. Every link we publish goes straight to the vendor. No affiliate links. Ever.</p>
+        </div>
+
         <div class="section">
-            <h2>How It Works</h2>
-            <div class="section-content">
-                <div class="content-block">
-                    <h3><span class="icon-symbol">1</span> Tell Us About You</h3>
-                    <p>What's your travel style? What matters most? How much do you want to spend? Our tool learns your personality, not your booking history.</p>
-                    <p class="step-note">Not sure of your travel style? <a href="https://wanderingmustache.com/traveler-types" target="_blank" rel="noopener noreferrer">Take the Wandering Mustache travel style quiz<span class="sr"> (opens in a new tab)</span></a> first. It's optional.</p>
-                </div>
-                <div class="content-block">
-                    <h3><span class="icon-symbol">2</span> AI Builds Your Itinerary</h3>
-                    <p>Powered by honest search and deep knowledge, we create an itinerary tailored to what <strong>you</strong> want—accommodation, restaurants, experiences, timing, budget—all in your control.</p>
-                </div>
-                <div class="content-block">
-                    <h3><span class="icon-symbol">3</span> You Own Your Trip</h3>
-                    <p>Customize everything. Book directly with providers. See exactly what you're paying. No commissions. No surprises. Your trip, your way.</p>
-                </div>
-                <div class="content-block">
-                    <h3><span class="icon-symbol">4</span> Travel Authentically</h3>
-                    <p>Experience the world as you envisioned it—without the noise of influencer trends or agent incentives. Just honest, thoughtful travel planning.</p>
-                </div>
-            </div>
+            <h2>Where We Are</h2>
+            <p class="sub">Honest timeline. We're travelers, not a tech company.</p>
+            <ol class="steps">
+                <li class="now"><b>Beta <span class="now-tag">We're here</span></b>Invite-only. A handful of testers break things on purpose while we fix the bugs.</li>
+                <li><b>Early access</b>Free for a small group of invited travelers, once the system holds up.</li>
+                <li><b>Public launch</b>Open to everyone. First itinerary free; the price for more is published before launch, with the math.</li>
+                <li><b>Booking help</b>Optional. The commission is disclosed on every quote, and the recommendation never changes because of it.</li>
+            </ol>
         </div>
-        
+
         <div class="cta-block">
-            <p>Ready to take control of your travel?</p>
-            <a class="cta-button" href="/">Start Planning Now</a>
-            <p class="beta-note">Invite-only while we're in beta. You'll need a passcode from Wandering Mustache.</p>
-            <div>
-                <a href="/truth" class="secondary-cta">Learn more about our approach</a>
-            </div>
+            <p>Want in early?</p>
+            <a class="cta-button" href="/">Request a Passcode</a>
+            <a class="cta-button cta-button--ghost" href="/sample">See a Sample Trip</a>
+            <p class="beta-note">Invite-only during beta. Join the list and we'll tell you when it opens.</p>
         </div>
-        
+
         <footer>
-            <p>Created by <a href="https://www.wanderingmustache.com" target="_blank" rel="noopener noreferrer">Wandering Mustache</a> — Anti-influencer travel for the discerning traveler</p>
-            <p style="margin-top: 16px; font-size: 12px;">© 2026 ai-tinerary. No middlemen. No commissions. Just honest travel planning.</p>
+            <p>Created by <a href="https://www.wanderingmustache.com" target="_blank" rel="noopener noreferrer">Wandering Mustache</a>: anti-influencer travel for the discerning traveler.</p>
+            <p style="margin-top: 16px; font-size: 12px;">© 2026 ai-tinerary. Recommendations are never for sale. Every commission is disclosed.</p>
         </footer>
     </div>
 </body>

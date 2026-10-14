@@ -20,6 +20,7 @@ function Header({ large, topNav }) {
       {topNav && (
         <nav className="topnav" aria-label="Main">
           <a href={link('/')} aria-current="page">Home</a>
+          <a href={link('/sample')}>Sample trip</a>
           <a href={link('/truth')}>The Truth</a>
           <a href={link('/about')}>How it works</a>
         </nav>
@@ -58,13 +59,47 @@ function Gate({ onUnlock, notice }) {
         <div className="nav"><span /><button type="submit" className="btn" disabled={busy || !code.trim()}>{busy ? 'Checking…' : 'Continue'}</button></div>
       </form>
       <aside className="gate__help" aria-labelledby="nopass">
-        <h2 id="nopass">No passcode? Here's why you want one:</h2>
-        <p>ai-tinerary is invite-only while we're in beta. We're travelers, not a tech company, and this site is still held together by duct tape and good intentions. So passcodes go out by hand, one traveler at a time. We are building this tool for our group of select clients. Check out our public face:{' '}
-          <a href="https://www.wanderingmustache.com/" target="_blank" rel="noopener noreferrer">Wandering Mustache</a>, and check back for our public release.</p>
+        <h2 id="nopass">No passcode? Get on the list.</h2>
+        <p>ai-tinerary is invite-only while we work out the bugs. We're travelers, not a tech company, and right now this site is held together by duct tape and good intentions. Next, a small group of invited travelers gets to use it free. Then it opens to everyone, and your first itinerary is free.</p>
+        <p>Leave your email and we'll tell you when it's your turn. No newsletter, no sales call, and your address goes nowhere else.</p>
+        <Waitlist />
         <p className="gate__tag">Built by travelers, for travelers.</p>
       </aside>
-      <p className="gate__more">Still Curious? Read <a href={link('/truth')}>The Truth About Travel</a> or see <a href={link('/about')}>how ai-tinerary works</a>.</p>
+      <p className="gate__more">Still curious? See <a href={link('/sample')}>a sample trip</a>, read <a href={link('/truth')}>The Truth About Travel</a>, or see <a href={link('/about')}>how it works</a> and <a href="/about#money">who pays us</a>. The brags live at{' '}
+        <a href="https://www.wanderingmustache.com/" target="_blank" rel="noopener noreferrer">Wandering Mustache</a>.</p>
     </main>
+  );
+}
+
+// The waitlist form inside the gate: email required, name and dream destination optional.
+// "website" is a hidden honeypot field; people never see it, simple bots fill it in.
+function Waitlist() {
+  const [f, setF] = useState({ name: '', email: '', note: '', website: '' });
+  const [state, setState] = useState('idle'); // idle | busy | done
+  const [error, setError] = useState('');
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!f.email.trim()) return;
+    setState('busy'); setError('');
+    try { await api.waitlist(f); setState('done'); }
+    catch (err) { setError(err.message); setState('idle'); }
+  };
+  if (state === 'done') {
+    return <p className="status waitlist__done" role="status">You're on the list. We'll email you once, when it's your turn.</p>;
+  }
+  return (
+    <form className="waitlist" onSubmit={submit}>
+      <label htmlFor="wl-name">Your name <span className="waitlist__opt">(optional)</span></label>
+      <input id="wl-name" className="input" type="text" value={f.name} onChange={set('name')} maxLength={120} autoComplete="name" />
+      <label htmlFor="wl-email">Email</label>
+      <input id="wl-email" className="input" type="email" value={f.email} onChange={set('email')} maxLength={200} autoComplete="email" required />
+      <label htmlFor="wl-note">Where are you dreaming of going? <span className="waitlist__opt">(optional)</span></label>
+      <input id="wl-note" className="input" type="text" value={f.note} onChange={set('note')} maxLength={500} />
+      <div className="waitlist__hp" aria-hidden="true"><label htmlFor="wl-website">Leave this empty</label><input id="wl-website" type="text" tabIndex={-1} autoComplete="off" value={f.website} onChange={set('website')} /></div>
+      {error && <p className="status status--error" role="alert">{error}</p>}
+      <button type="submit" className="btn" disabled={state === 'busy' || !f.email.trim()}>{state === 'busy' ? 'Adding you…' : 'Put me on the list'}</button>
+    </form>
   );
 }
 
@@ -514,6 +549,11 @@ function Admin() {
             <thead><tr><th>Created</th><th>Destination</th><th>Travelers</th><th>Stage</th><th>Versions</th><th>Calls</th><th>Cost</th></tr></thead>
             <tbody>{data.trips.map((t) => <tr key={t.id}><td>{new Date(t.created_at).toLocaleDateString()}</td><td><a href={link(`/trip/${t.id}`)}>{t.destination}</a></td><td>{t.traveler_count}</td><td>{t.stage}</td><td>{t.itinerary_versions}</td><td>{t.calls}</td><td>${t.cost_usd.toFixed(3)}</td></tr>)}</tbody>
           </table></div>
+          <h2>Waitlist ({data.waitlist?.length || 0})</h2>
+          <div className="table-wrap"><table>
+            <thead><tr><th>Joined</th><th>Name</th><th>Email</th><th>Dreaming of</th></tr></thead>
+            <tbody>{(data.waitlist || []).map((w) => <tr key={w.email}><td>{new Date(w.created_at).toLocaleDateString()}</td><td>{w.name || ''}</td><td><a href={`mailto:${w.email}`}>{w.email}</a></td><td>{w.note || ''}</td></tr>)}</tbody>
+          </table></div>
         </>
       )}
     </main>
@@ -554,7 +594,7 @@ export default function App({ pages }) {
         : path.startsWith('/admin') ? <Admin />
         : isPlan ? <Plan key={path} /> : <NotFound />}
       <footer className="foot">
-        <p><a href={link('/')}>Plan a trip</a> · <a href={link('/truth')}>The Truth About Travel</a> · <a href={link('/about')}>How it works</a> · <a href="https://www.wanderingmustache.com" target="_blank" rel="noopener noreferrer">Wandering Mustache</a></p>
+        <p><a href={link('/')}>Plan a trip</a> · <a href={link('/sample')}>Sample trip</a> · <a href={link('/truth')}>The Truth About Travel</a> · <a href={link('/about')}>How it works</a> · <a href="https://www.wanderingmustache.com" target="_blank" rel="noopener noreferrer">Wandering Mustache</a></p>
         <p>Invite-only planning by Wandering Mustache.</p>
       </footer>
     </>

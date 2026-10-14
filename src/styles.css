@@ -250,3 +250,13 @@ tr.total td, tr.total th { font-weight: 700; border-top: 2px solid var(--ink); }
 .topnav { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 28px; padding: 2px 0 20px; font: 600 15px var(--head); letter-spacing: 0.02em; }
 .topnav a { color: var(--ink-soft); text-decoration: none; padding: 3px 2px; border-bottom: 2px solid transparent; }
 .topnav a:hover, .topnav a[aria-current='page'] { color: var(--ink); border-bottom-color: var(--rope); }
+
+/* Waitlist form inside the passcode gate */
+.waitlist { text-align: left; margin: 14px 0 6px; display: grid; gap: 6px; }
+.waitlist label { font-size: 14px; font-weight: 600; margin-top: 6px; }
+.waitlist__opt { font-weight: 400; color: var(--leather); font-style: italic; }
+.waitlist .btn { margin-top: 10px; justify-self: start; }
+.waitlist__hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.waitlist__done { font-weight: 600; color: var(--leather); }
+.opt__take { font-style: italic; }
+.opt__take b { font-style: normal; color: var(--leather); }
