@@ -15,6 +15,7 @@ OUT = Path(__file__).resolve().parent.parent / 'server' / 'wander-maps.json'
 VAIL = 'Vail Valley, Colorado (Vail, Beaver Creek, Avon, Edwards, Minturn)'
 DEST = {
     'athens-36-hours': 'Athens, Greece',
+    'barcelona': 'Barcelona, Spain',
     'explora-ii-ports': 'Explora II ports (Greece, Croatia, Montenegro, Italy)',
     'explora-ii-deep-dive': 'Explora II', 'explora-ii': 'Explora II',
     'mexico-city': 'Mexico City, Mexico', 'multi-modal-european-wander': 'Europe',
