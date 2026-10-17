@@ -91,6 +91,22 @@ function basicsText(trip) {
 
 // Sensitive details are only sent to the steps that need them.
 function travelersText(trip, { includeNeeds = true } = {}) {
+  const blocks = travelerBlocks(trip, { includeNeeds });
+  // Master form: most answers were given once for the whole group, so every traveler's block
+  // repeats them. State the shared lines once, then only what differs per person — same facts,
+  // far shorter prompt for a big group.
+  if (trip.group_answers?.intake_mode === 'master' && blocks.length > 1) {
+    const rest = blocks.map((b) => b.slice(1));
+    const shared = rest[0].filter((line) => rest.every((r) => r.includes(line)));
+    return [
+      `The organizer answered once for the whole group of ${blocks.length}. Everyone shares these:\n${shared.join('\n') || '  (no shared preferences given; plan a balanced trip)'}`,
+      ...blocks.map((b) => [b[0], ...b.slice(1).filter((line) => !shared.includes(line))].join('\n')),
+    ].join('\n\n');
+  }
+  return blocks.map((b) => b.join('\n')).join('\n\n');
+}
+
+function travelerBlocks(trip, { includeNeeds = true } = {}) {
   return (trip.travelers || []).map((t, i) => {
     const unansweredSelf = trip.group_answers?.intake_mode === 'self' && t.status !== 'done';
     const lines = [
@@ -121,8 +137,8 @@ function travelersText(trip, { includeNeeds = true } = {}) {
       if (types.includes('health')) lines.push(`  Health considerations: ${[...(t.health || []), t.health_other].filter(Boolean).join(', ')}`);
       if (diet.length || t.diet_other) lines.push(`  Dietary/allergies: ${[...diet, t.diet_other].filter(Boolean).join(', ')}${diet.includes('Gluten-free / Celiac') && t.gluten_level ? ` (gluten: ${t.gluten_level})` : ''}`);
     }
-    return lines.filter(Boolean).join('\n');
-  }).join('\n\n');
+    return lines.filter(Boolean);
+  });
 }
 
 function groupText(trip) {

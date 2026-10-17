@@ -11,6 +11,7 @@ import { rememberTrip, getRecentTrips, forgetTrip } from './localTrip.js';
 import { getSession, setSession, clearSession, onSessionChange } from './session.js';
 import { ago, tripWhen, stageLabel } from './format.js';
 import { newTraveler } from './options.js';
+import { expandMaster } from './MasterIntake.jsx';
 import { go, link, currentPath, isHash, isRouteHash } from './router.js';
 
 
@@ -412,7 +413,8 @@ function TripFlow({ id }) {
   // draft, so going Back to Trip details and Continue-ing forward again doesn't resend a stale
   // copy of group_answers that's missing this change.
   const groupPatch = (patch) => {
-    const merged = { ...trip.group_answers, ...patch };
+    // Merge into the local draft (not the last-saved copy) so unsaved master-form edits survive.
+    const merged = { ...trip.group_answers, ...draft.group_answers, ...patch };
     setDraft({ ...draft, group_answers: merged });
     return save({ group_answers: merged });
   };
@@ -434,6 +436,17 @@ function TripFlow({ id }) {
     if (t && !t.research?.tiles) run('tiles');
   };
   const toReview = async () => {
+    // Master form: one set of answers for the whole group, turned into a traveler record per person.
+    // Names are optional here, so there's no "add a name" check.
+    if (trip.group_answers?.intake_mode === 'master' && count > 1) {
+      const travelers = expandMaster(draft.group_answers.master, count, draft.travelers, draft.basics.organizer_name);
+      const t = await save({ travelers, group_answers: draft.group_answers }, 'review');
+      if (!t) return;
+      setDraft({ ...draft, travelers: t.travelers });
+      run('review_check');
+      if ((t.travelers || []).some((x) => (x.diet || []).length)) run('needs');
+      return;
+    }
     const unnamed = draft.travelers.findIndex((t) => !t.name.trim());
     if (unnamed !== -1) return setError(`Add a name for traveler ${unnamed + 1}.`);
     const selfMode = trip.group_answers?.intake_mode === 'self';
@@ -489,7 +502,9 @@ function TripFlow({ id }) {
         <>
           <h1 className="title">{count > 1 ? 'Travelers' : 'About you'}</h1>
           <Stage3 trip={trip} travelers={draft.travelers} onChange={set('travelers')} onRun={run} skipDetails={skipDetails} setSkipDetails={setSkipDetails} flags={flags}
-            onGroupPatch={groupPatch} onSaveRoster={saveRoster} onRefresh={load} busy={busy} emailEnabled={emailEnabled} />
+            onGroupPatch={groupPatch} onSaveRoster={saveRoster} onRefresh={load} busy={busy} emailEnabled={emailEnabled}
+            count={count} master={draft.group_answers.master}
+            onMasterChange={(m) => setDraft({ ...draft, group_answers: { ...draft.group_answers, master: m } })} />
           <Nav onBack={() => setView('group')} onNext={toReview} nextLabel="Review" busy={busy} />
         </>
       )}

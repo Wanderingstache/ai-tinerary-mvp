@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Q, Tiles, Text, StepStatus } from './ui.jsx';
 import { link } from './router.js';
 import { api } from './api.js';
+import MasterIntake from './MasterIntake.jsx';
 import {
   AGES, WHY_TYPES, HOW_BUDGET, HOW_PLAN, DINING, INTERESTS, PACE_ALIGN, AVOID, FLEXIBILITY, ACTIVITY_LEVEL, RHYTHM, FOOD_ADVENTURE,
   SOLO_TIME, OBSERVANCE, ALCOHOL, NEEDS_TYPES, PHYSICAL, NEURO, HEALTH, DIET, GLUTEN_LEVEL,
@@ -222,7 +223,7 @@ function Roster({ trip, travelers, onNameChange, onGroupPatch, onSaveRoster, onR
   );
 }
 
-export default function Stage3({ trip, travelers, onChange, onRun, skipDetails, setSkipDetails, flags = {}, onGroupPatch, onSaveRoster, onRefresh, busy, emailEnabled }) {
+export default function Stage3({ trip, travelers, onChange, onRun, skipDetails, setSkipDetails, flags = {}, onGroupPatch, onSaveRoster, onRefresh, busy, emailEnabled, master, onMasterChange, count }) {
   const [open, setOpen] = useState(0);
   const anyNeedsOffered = flags.diet || flags.gluten || flags.physical || flags.neuro || flags.health;
   const needsOn = trip.group_answers?.needs_gate === 'yes' && anyNeedsOffered;
@@ -243,7 +244,11 @@ export default function Stage3({ trip, travelers, onChange, onRun, skipDetails, 
   const mode = trip.group_answers?.intake_mode || 'organizer';
   const modeToggle = travelers.length > 1 && (
     <Q label="Who answers the questions?">
-      <Tiles compact options={[{ key: 'organizer', label: "I'll answer for everyone" }, { key: 'self', label: 'Let each person answer for themselves' }]}
+      <Tiles options={[
+        { key: 'organizer', label: "I'll fill in a card for each person", line: 'Most detailed' },
+        { key: 'master', label: 'One master form for the whole group', line: 'Fastest for big groups' },
+        { key: 'self', label: 'Let each person answer for themselves', line: 'Send each traveler a link' },
+      ]}
         value={mode} onChange={(v) => onGroupPatch({ intake_mode: v || 'organizer' })} />
     </Q>
   );
@@ -254,6 +259,16 @@ export default function Stage3({ trip, travelers, onChange, onRun, skipDetails, 
         {modeToggle}
         <Roster trip={trip} travelers={travelers} onNameChange={(i, v) => setT(i, { name: v })}
           onGroupPatch={onGroupPatch} onSaveRoster={onSaveRoster} onRefresh={onRefresh} busy={busy} emailEnabled={emailEnabled} />
+      </div>
+    );
+  }
+
+  if (mode === 'master' && travelers.length > 1) {
+    return (
+      <div className="stage">
+        {modeToggle}
+        <MasterIntake master={master} onChange={onMasterChange} count={count || travelers.length}
+          glutenOn={needsOn && !!flags.gluten} organizerName={trip.basics?.organizer_name || ''} />
       </div>
     );
   }

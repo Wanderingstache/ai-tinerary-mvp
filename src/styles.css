@@ -260,3 +260,10 @@ tr.total td, tr.total th { font-weight: 700; border-top: 2px solid var(--ink); }
 .waitlist__done { font-weight: 600; color: var(--leather); }
 .opt__take { font-style: italic; }
 .opt__take b { font-style: normal; color: var(--leather); }
+
+/* Master intake: one compact row per traveler */
+.master-rows { display: grid; gap: 10px; margin-top: 8px; }
+.master-row { display: flex; gap: 12px; align-items: flex-start; background: var(--paper); border: 1px solid var(--line); border-left: 6px solid var(--rope); border-radius: 12px; padding: 10px 12px; }
+.master-row__fields { flex: 1; min-width: 0; }
+.master-row .row { flex-wrap: wrap; }
+.master-row select.input { min-width: 0; }

@@ -42,6 +42,9 @@ export const REST = ['Sleeping in', 'Light exploration (museums, bookstores, caf
 export const MUST_DO_CATS = ['Major landmarks', 'Local food scene', 'Museums/history', 'Nature/outdoors', 'Nightlife', 'Shopping', 'Day trips', 'Walkable neighborhoods', 'Public transport', 'Daily downtime'];
 export const MUST_AVOID_CATS = ['Long travel days', 'Early mornings', 'Crowded tourist traps', 'Guided tour groups', 'Lots of walking/stairs', 'Late nights', 'Big cities', 'Rural/off-the-grid areas'];
 
+// Largest group the intake accepts. The server enforces the same number (server/index.js).
+export const MAX_TRAVELERS = 30;
+
 export const AGES = ['Under 18', '18–24', '25–34', '35–44', '45–54', '55–64', '65+'];
 // Matches the Wandering Mustache travel-style quiz: WHY someone travels (their motivation) is
 // separate from HOW they travel (spending style and planning style), not one flat list.

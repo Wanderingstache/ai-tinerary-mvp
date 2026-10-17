@@ -41,6 +41,13 @@ const wrap = (fn) => (req, res) => fn(req, res).catch((e) => {
   res.status(500).json({ error: e.message || 'Something went wrong' });
 });
 
+// Largest group the intake accepts — keep in step with MAX_TRAVELERS in src/options.js.
+const MAX_TRAVELERS = 30;
+function cleanBasics(b = {}) {
+  const n = Math.round(Number(b.traveler_count)) || 1;
+  return { ...b, traveler_count: Math.max(1, Math.min(MAX_TRAVELERS, n)) };
+}
+
 function datesFromBasics(b = {}) {
   const hasDates = b.date_mode !== 'days' && b.start_date && b.end_date;
   return {
@@ -165,7 +172,8 @@ app.get('/api/my-trips', wrap(async (req, res) => {
 
 // Create a trip (Stage 1). Starts the two Stage 1 Haiku calls right away.
 app.post('/api/trips', wrap(async (req, res) => {
-  const { access_code, basics } = req.body || {};
+  const { access_code } = req.body || {};
+  const basics = cleanBasics(req.body?.basics);
   if (tooManyMisses(req)) return res.status(429).json({ error: TOO_MANY });
   if (!codeOk(access_code)) { recordMiss(req); return res.status(403).json({ error: BAD_CODE }); }
   const d = datesFromBasics(basics);
@@ -207,7 +215,7 @@ app.put('/api/trips/:id', wrap(async (req, res) => {
     const d = datesFromBasics(b.basics);
     if (!d.destination) return res.status(400).json({ error: 'Enter a destination to continue.' });
     placeChanged = d.destination !== trip.destination || d.start_date !== trip.start_date || d.end_date !== trip.end_date || d.day_count !== trip.day_count;
-    add('basics', JSON.stringify(b.basics));
+    add('basics', JSON.stringify(cleanBasics(b.basics)));
     add('destination', d.destination); add('start_date', d.start_date); add('end_date', d.end_date); add('day_count', d.day_count);
   }
   if (b.group_answers) add('group_answers', JSON.stringify(b.group_answers));
@@ -216,9 +224,10 @@ app.put('/api/trips/:id', wrap(async (req, res) => {
     // traveler needs their own invite link. A token is assigned here, the moment travelers are
     // saved in that mode, rather than needing a separate "generate links" step.
     const mode = b.group_answers?.intake_mode ?? trip.group_answers?.intake_mode;
+    const list = (Array.isArray(b.travelers) ? b.travelers : []).slice(0, MAX_TRAVELERS);
     const travelers = mode === 'self'
-      ? b.travelers.map((t) => (t.invite_token ? t : { ...t, invite_token: randomUUID() }))
-      : b.travelers;
+      ? list.map((t) => (t.invite_token ? t : { ...t, invite_token: randomUUID() }))
+      : list;
     add('travelers', JSON.stringify(travelers));
   }
   if (b.review) add('review', JSON.stringify(b.review));
