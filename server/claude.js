@@ -10,6 +10,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { MODELS, PRICES, WEB_SEARCH_PRICE, STEPS } from './settings.js';
 import { query } from './db.js';
 import { mockResponse } from './mocks.js';
+import { alertIfOwnerProblem } from './alerts.js';
 
 const apiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
 const client = apiKey ? new Anthropic({ apiKey }) : null;
@@ -130,6 +131,7 @@ export async function runStep(tripId, stepKey, prompt, { maxTokens = 4000 } = {}
     return json;
   } catch (err) {
     await logCall(tripId, stepKey, model, usage, searches, Date.now() - started, false, err.message);
+    alertIfOwnerProblem(err); // texts Cris if the account is out of credits or the key stopped working
     throw err;
   }
 }

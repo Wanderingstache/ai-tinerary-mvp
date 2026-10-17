@@ -165,6 +165,10 @@ function Plan() {
       try {
         const cfg = await api.config();
         if (!cfg.needsAccessCode) return setGate('open');
+        // Beta: account holders skip the passcode (the server checks the same thing).
+        if (cfg.accountAccess && getSession()) {
+          try { await api.me(); return setGate('open'); } catch { /* not signed in after all */ }
+        }
         const saved = savedCode();
         if (saved) {
           try { await api.access(saved); setCode(saved); return setGate('open'); } catch { forgetCode(); }
@@ -560,6 +564,12 @@ function TripFlow({ id }) {
 }
 
 const ADMIN_KEY_STORE = 'ait_admin_key';
+// Sends a test "out of credits" style alert to the phone/email set in ALERT_TO.
+function TestAlert({ adminKey }) {
+  const [msg, setMsg] = useState('');
+  const send = async () => { setMsg('Sending…'); try { await api.adminTestAlert(adminKey); setMsg('Sent. Check your phone.'); } catch (e) { setMsg(e.message); } };
+  return <p className="fine">Credit alerts go to your phone. <button type="button" className="linkbtn" onClick={send}>Send a test text</button> {msg}</p>;
+}
 function Admin() {
   const [key, setKey] = useState(() => { try { return sessionStorage.getItem(ADMIN_KEY_STORE) || ''; } catch { return ''; } });
   const [builds, setBuilds] = useState(null);
@@ -598,6 +608,7 @@ function Admin() {
             <thead><tr><th>Created</th><th>Destination</th><th>Travelers</th><th>Stage</th><th>Versions</th><th>Calls</th><th>Cost</th></tr></thead>
             <tbody>{data.trips.map((t) => <tr key={t.id}><td>{new Date(t.created_at).toLocaleDateString()}</td><td>{t.destination}</td><td>{t.traveler_count}</td><td>{t.stage}</td><td>{t.itinerary_versions}</td><td>{t.calls}</td><td>${t.cost_usd.toFixed(3)}</td></tr>)}</tbody>
           </table></div>
+          <TestAlert adminKey={key} />
           <h2>Beta builds and comments ({builds?.length || 0})</h2>
           <p className="fine">No names or email addresses here, just trip details, as promised to beta testers.</p>
           <ul className="trip-list">

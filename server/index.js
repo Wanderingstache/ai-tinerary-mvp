@@ -7,6 +7,7 @@ import { initDb, query, purgeFinishedTrips } from './db.js';
 import { runPricing, runTiles, runNeeds, runReviewCheck, runGenerate, startStep, startFraming, getTrip, getTripByInviteToken } from './steps.js';
 import { STEPS, MAX_GENERATIONS_PER_TRIP, NEEDS } from './settings.js';
 import { emailConfigured, sendTripLinkEmail, sendSignInEmail } from './email.js';
+import { alertsConfigured, sendAlert } from './alerts.js';
 import { normalizeEmail, validEmail, looksLikeToken, createSignInToken, redeemSignInToken, createSession, sessionEmail, destroySession, purgeExpiredAuth, allow, hashPassword, checkPassword, PASSWORD_MIN } from './auth.js';
 
 const app = express();
@@ -29,6 +30,11 @@ const recordMiss = (req) => {
   else r.n += 1;
 };
 setInterval(() => { for (const [ip, r] of misses) if (r.reset < Date.now()) misses.delete(ip); }, 10 * 60 * 1000).unref();
+// Beta: anyone signed in (they had to use the passcode to get an account or a sign-in link) can
+// keep creating trips without typing the passcode again. Set BETA_ACCOUNT_ACCESS=0 in Railway to
+// turn this off when beta ends.
+const ACCOUNT_ACCESS = process.env.BETA_ACCOUNT_ACCESS !== '0';
+const signedInMember = async (req) => (ACCOUNT_ACCESS ? !!(await sessionEmail(req)) : false);
 const BAD_CODE = "That passcode isn't right. Check the one Wandering Mustache sent you.";
 const TOO_MANY = 'Too many tries. Please wait a few minutes and try again.';
 
@@ -88,7 +94,7 @@ app.post('/api/access', (req, res) => {
   if (!codeOk((req.body || {}).code)) { recordMiss(req); return res.status(403).json({ error: BAD_CODE }); }
   res.json({ ok: true });
 });
-app.get('/api/config', (req, res) => res.json({ needsAccessCode: !!ACCESS_CODE, maxVersions: MAX_GENERATIONS_PER_TRIP, needs: NEEDS, emailEnabled: emailConfigured() }));
+app.get('/api/config', (req, res) => res.json({ needsAccessCode: !!ACCESS_CODE, accountAccess: ACCOUNT_ACCESS, maxVersions: MAX_GENERATIONS_PER_TRIP, needs: NEEDS, emailEnabled: emailConfigured() }));
 
 // Share Trip, Option B: email the organizer their own trip link, so closing the tab isn't the end
 // of the road. Does nothing but return a clear error until RESEND_API_KEY exists in Railway.
@@ -298,8 +304,10 @@ app.get('/api/my-trips', wrap(async (req, res) => {
 app.post('/api/trips', wrap(async (req, res) => {
   const { access_code } = req.body || {};
   const basics = cleanBasics(req.body?.basics);
-  if (tooManyMisses(req)) return res.status(429).json({ error: TOO_MANY });
-  if (!codeOk(access_code)) { recordMiss(req); return res.status(403).json({ error: BAD_CODE }); }
+  if (!(await signedInMember(req))) {
+    if (tooManyMisses(req)) return res.status(429).json({ error: TOO_MANY });
+    if (!codeOk(access_code)) { recordMiss(req); return res.status(403).json({ error: BAD_CODE }); }
+  }
   const d = datesFromBasics(basics);
   if (!d.destination) return res.status(400).json({ error: 'Enter a destination to continue.' });
   if (d.start_date && d.end_date && d.end_date < d.start_date) return res.status(400).json({ error: 'The end date is before the start date.' });
@@ -516,6 +524,14 @@ const adminOk = (req, res) => {
   if (!ADMIN_KEY || req.get('x-admin-key') !== ADMIN_KEY) { res.status(403).json({ error: 'Wrong admin key.' }); return false; }
   return true;
 };
+
+// Admin: send a test alert to ALERT_TO, to check the text actually arrives.
+app.post('/api/admin/test-alert', wrap(async (req, res) => {
+  if (!adminOk(req, res)) return;
+  if (!alertsConfigured()) return res.status(400).json({ error: 'Alerts are off. Set ALERT_TO (and email sending) in Railway first.' });
+  await sendAlert('test', 'ai-tinerary: test alert. If you got this, credit alerts will reach you here.');
+  res.json({ ok: true });
+}));
 
 app.get('/api/admin/builds', wrap(async (req, res) => {
   if (!adminOk(req, res)) return;

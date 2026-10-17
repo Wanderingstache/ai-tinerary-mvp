@@ -8,6 +8,13 @@ See README.md for how the code is organized.
 
 ## Decisions (newest first)
 
+### 2026-10-17 — Account access through beta, and credit alerts
+- Signed-in account holders can create trips without the passcode (`BETA_ACCOUNT_ACCESS`, default on;
+  set to 0 in Railway when beta ends). The per-trip rebuild cap (MAX_GENERATIONS_PER_TRIP) still applies.
+- `server/alerts.js`: when a Claude call fails because the account is out of credits or the API key
+  stopped working, a short message goes to `ALERT_TO` (Cris's email-to-text address), at most once per
+  6 hours per kind. /admin has a "Send a test text" button.
+
 ### 2026-10-17 — Beta note, feedback, and the Stache's anonymous review
 - Promise to beta testers (`BETA_NOTE` in `src/ui.jsx`, shown on the Plan page and with the feedback
   box): the Stache reviews every itinerary built and every comment, but never sees names or email

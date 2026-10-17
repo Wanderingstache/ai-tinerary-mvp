@@ -49,3 +49,8 @@ export function sendSignInEmail({ to, url }) {
     html: `<p>Tap this link to sign in to ai-tinerary and see your trips:</p><p><a href="${esc(url)}">${esc(url)}</a></p><p>It works once and expires in 15 minutes. If you didn't ask for this, you can ignore this email — nothing happens unless the link is opened.</p>${NOT_MONITORED_HTML}`,
   });
 }
+
+// Short plain-text message (owner alerts, which may land on a phone as a text).
+export function sendPlainEmail({ to, subject, text }) {
+  return sendEmail({ to, subject, text, html: `<p>${esc(text)}</p>` });
+}
