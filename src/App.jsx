@@ -12,6 +12,7 @@ import { getSession, setSession, clearSession, onSessionChange } from './session
 import { ago, tripWhen, stageLabel } from './format.js';
 import { newTraveler } from './options.js';
 import { expandMaster } from './MasterIntake.jsx';
+import { AccountPrompt, AccountForm, PasswordForm, MyTravelers, useMe } from './Account.jsx';
 import { go, link, currentPath, isHash, isRouteHash } from './router.js';
 
 
@@ -145,6 +146,7 @@ function Start({ code, onRejected }) {
           <button type="button" className="linkbtn" onClick={() => setHideRecent(true)}>Start a new trip instead</button>
         </aside>
       )}
+      <AccountPrompt code={code} />
       <p className="lede">Answer a few questions for your whole group. We research real prices, check your must-dos, and build one itinerary that works for everyone.</p>
       <Stage1 value={basics} onChange={setBasics} />
       {error && <p className="status status--error" role="alert">{error}</p>}
@@ -179,25 +181,15 @@ function Plan() {
 // Optional and passwordless: you ask for a link by email, tap it, and this device is signed in. It
 // doesn't change how trips or traveler links work — it only makes your trips findable anywhere.
 function AccountBar() {
-  const [emailEnabled, setEmailEnabled] = useState(false);
-  const [email, setEmail] = useState('');
-  useEffect(() => { api.config().then((c) => setEmailEnabled(!!c.emailEnabled)).catch(() => {}); }, []);
-  useEffect(() => {
-    const check = () => {
-      if (!getSession()) return setEmail('');
-      api.me().then((r) => setEmail(r.email)).catch((e) => { if (e.status === 401) clearSession(); setEmail(''); });
-    };
-    check();
-    return onSessionChange(check);
-  }, []);
+  const { status, me } = useMe();
   const signOut = () => { api.authLogout().catch(() => {}); clearSession(); };
-  if (email) {
+  if (status === 'in') {
     return (
-      <p className="acct">Signed in as <strong>{email}</strong> · <a href={link('/trips')}>My trips</a> · <button type="button" className="linkbtn" onClick={signOut}>Sign out</button></p>
+      <p className="acct">Signed in as <strong>{me.name || me.email}</strong> · <a href={link('/trips')}>My trips</a> · <a href={link('/account')}>My travelers</a> · <button type="button" className="linkbtn" onClick={signOut}>Sign out</button></p>
     );
   }
-  if (!emailEnabled) return null;
-  return <p className="acct"><a href={link('/trips')}>Sign in to find your trips</a></p>;
+  if (status === 'loading') return null;
+  return <p className="acct"><a href={link('/trips')}>Sign in or create an account</a></p>;
 }
 
 function SignInForm() {
@@ -244,6 +236,23 @@ function SignInForm() {
   );
 }
 
+// Email + password by default; the emailed link stays as the "forgot my password" route.
+function TripsSignIn() {
+  const [emailLink, setEmailLink] = useState(false);
+  const [emailEnabled, setEmailEnabled] = useState(false);
+  useEffect(() => { api.config().then((c) => setEmailEnabled(!!c.emailEnabled)).catch(() => {}); }, []);
+  if (emailLink) {
+    return (
+      <>
+        <p className="note">We'll email you a one-time sign-in link. Once you're in, you can set a new password on the My travelers page.</p>
+        <SignInForm />
+        <p><button type="button" className="linkbtn" onClick={() => setEmailLink(false)}>Back to email and password</button></p>
+      </>
+    );
+  }
+  return <AccountForm code={savedCode()} start="signin" onEmailLink={emailEnabled ? () => setEmailLink(true) : undefined} />;
+}
+
 function MyTrips() {
   const [state, setState] = useState('loading'); // loading | out | ready | error
   const [data, setData] = useState(null);
@@ -262,8 +271,8 @@ function MyTrips() {
     return (
       <main className="wrap">
         <h1 className="title">Find your trips</h1>
-        <p className="lede">Sign in with your email to see every trip you've started, from any phone or computer. No password — we email you a link.</p>
-        <SignInForm />
+        <p className="lede">Sign in to see every trip you've started, from any phone or computer.</p>
+        <TripsSignIn />
       </main>
     );
   }
@@ -271,6 +280,7 @@ function MyTrips() {
   return (
     <main className="wrap">
       <h1 className="title">My trips</h1>
+      <NoPasswordNudge />
       {trips.length === 0 ? (
         <>
           <p className="lede">No trips here yet. Trips you start while signed in show up here.</p>
@@ -286,8 +296,21 @@ function MyTrips() {
           ))}
         </ul>
       )}
-      <p><a className="btn" href={link('/')}>Plan a new trip</a></p>
+      <p><a className="btn" href={link('/')}>Plan a new trip</a> <a className="btn btn--ghost" href={link('/account')}>My travelers</a></p>
     </main>
+  );
+}
+
+// Someone who signed in by emailed link (before passwords existed) gets offered one.
+function NoPasswordNudge() {
+  const { status, me } = useMe();
+  const [done, setDone] = useState(false);
+  if (status !== 'in' || me?.hasPassword || done) return null;
+  return (
+    <aside className="panel">
+      <p><strong>Add a password</strong> so you can sign in with your email and password next time, no email link needed.</p>
+      <PasswordForm hasPassword={false} onDone={() => setDone(true)} />
+    </aside>
   );
 }
 
@@ -597,15 +620,17 @@ export default function App({ pages }) {
   const inviteMatch = path.match(/^\/invite\/([0-9a-f-]{36})/i);
   const signInMatch = path.match(/^\/signin\/([A-Za-z0-9_-]{43})$/);
   const isTrips = path === '/trips';
+  const isAccount = path === '/account';
   const isPlan = path === '/' || path === '/plan';
   return (
     <>
       <Header large={isPlan} topNav={isPlan} />
-      {(tripMatch || isPlan || isTrips) && <AccountBar />}
+      {(tripMatch || isPlan || isTrips || isAccount) && <AccountBar />}
       {tripMatch ? <TripFlow key={path} id={tripMatch[1]} />
         : inviteMatch ? <InviteFlow key={path} token={inviteMatch[1]} />
         : signInMatch ? <SignInFinish key={path} token={signInMatch[1]} />
         : isTrips ? <MyTrips key={path} />
+        : isAccount ? <MyTravelers key={path} />
         : path.startsWith('/admin') ? <Admin />
         : isPlan ? <Plan key={path} /> : <NotFound />}
       <footer className="foot">

@@ -80,6 +80,27 @@ export async function initDb() {
       name TEXT,
       note TEXT
     );
+    -- Accounts (email + password). They live only in this database, on ai-tinerary.com; nothing
+    -- here is shared with wanderingmustache.com. Only a salted scrypt hash of a password is kept.
+    CREATE TABLE IF NOT EXISTS accounts (
+      email TEXT PRIMARY KEY,
+      password_hash TEXT,
+      name TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    -- "My travelers": saved people (yourself and your usual travel partners) with their travel
+    -- style and preferences, so a new trip's cards can be filled in with one tap. Copied INTO a
+    -- trip when used; editing a saved traveler later never changes a past trip.
+    CREATE TABLE IF NOT EXISTS saved_people (
+      id UUID PRIMARY KEY,
+      owner_email TEXT NOT NULL,
+      is_self BOOLEAN NOT NULL DEFAULT false,
+      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS saved_people_owner_idx ON saved_people(owner_email);
     CREATE TABLE IF NOT EXISTS sessions (
       token_hash TEXT PRIMARY KEY,
       email TEXT NOT NULL,

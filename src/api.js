@@ -29,5 +29,13 @@ export const api = {
   authLogout: () => call('POST', '/api/auth/logout'),
   me: () => call('GET', '/api/me'),
   myTrips: () => call('GET', '/api/my-trips'),
+  register: (body) => call('POST', '/api/auth/register', body),
+  login: (body) => call('POST', '/api/auth/login', body),
+  setPassword: (password) => call('POST', '/api/auth/password', { password }),
+  claimTrips: (trip_ids) => call('POST', '/api/my-trips/claim', { trip_ids }),
+  people: () => call('GET', '/api/people'),
+  addPerson: (p) => call('POST', '/api/people', p),
+  updatePerson: (id, p) => call('PUT', `/api/people/${id}`, p),
+  deletePerson: (id) => call('DELETE', `/api/people/${id}`),
   emailTravelerLink: (id, travelerId, email) => call('POST', `/api/trips/${id}/travelers/${travelerId}/email-link`, { email }),
 };

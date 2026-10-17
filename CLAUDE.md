@@ -8,6 +8,21 @@ See README.md for how the code is organized.
 
 ## Decisions (newest first)
 
+### 2026-10-17 — Accounts (email + password) and My travelers
+- Beta clients (with the passcode) can create an account: email + password, optional first name.
+  Accounts live ONLY in ai-tinerary's database and are never shared with Wandering Mustache — say
+  so wherever we ask people to sign up (`PRIVACY_LINE` in `src/Account.jsx`).
+- Creating an account needs the passcode; signing in doesn't. Passwords: min 8 chars, salted scrypt
+  hash (`server/auth.js`). Login is rate-limited per address and per visitor.
+- The emailed sign-in link still works for the same address and is the "forgot password" route:
+  sign in by link, then set a new password on /account.
+- On sign-up/sign-in, trips this browser already opened (and nobody owns yet) join "My trips".
+- /account = "My travelers": you plus your usual travel partners, with travel style and card
+  answers (including gluten). Saved in `saved_people`. On a trip's traveler card, "Fill from My
+  travelers" copies a saved person in; "Save to My travelers" saves the card. Copies, not links —
+  editing a saved person never changes past trips. Must-dos stay with the trip, not the person.
+- The Plan-a-trip page shows a dismissible "Make yourself at home" account prompt to signed-out visitors.
+
 ### 2026-10-17 — Group size and master intake
 - Groups can be 1–30 travelers (`MAX_TRAVELERS` in `src/options.js` and `server/index.js`, keep both in step).
 - The "5+" box now starts empty and shows "Planning for N travelers" so the count is never silently 5.

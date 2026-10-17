@@ -62,6 +62,8 @@ not a rebuild.
 - `/truth` — "The Truth About Travel" (`public/truth.html`), with the how-a-trip-becomes-an-itinerary diagram at the top
 - `/about` — "Travel on Your Terms" / how it works (`public/landing.html`), with the optional travel-style quiz link in step 1
 - `/trip/<id>` — the trip, Steps 2–5. Anyone with this link can view and edit that trip
+- `/trips` — My trips (sign in with email + password, or by emailed link)
+- `/account` — My travelers (saved people and travel styles) and password settings
 - `/admin` — costs per trip and per step (needs ADMIN_KEY)
 - Old addresses still work: `/plan` goes to `/`; `/truth.html` goes to `/truth`; `/index.html` and `/landing.html` go to `/about`
 

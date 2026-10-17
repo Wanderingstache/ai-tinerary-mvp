@@ -3,6 +3,7 @@ import { Q, Tiles, Text, StepStatus } from './ui.jsx';
 import { link } from './router.js';
 import { api } from './api.js';
 import MasterIntake from './MasterIntake.jsx';
+import { SavedTravelerTools } from './Account.jsx';
 import {
   AGES, WHY_TYPES, HOW_BUDGET, HOW_PLAN, DINING, INTERESTS, PACE_ALIGN, AVOID, FLEXIBILITY, ACTIVITY_LEVEL, RHYTHM, FOOD_ADVENTURE,
   SOLO_TIME, OBSERVANCE, ALCOHOL, NEEDS_TYPES, PHYSICAL, NEURO, HEALTH, DIET, GLUTEN_LEVEL,
@@ -43,7 +44,7 @@ function MustDos({ value = [], onChange, tiles }) {
 
 // Shared with the Share Trip invite page (InviteFlow.jsx), which uses it to show one traveler's
 // own card without any of the organizer's other controls around it.
-export function Card({ t, i, set, needsOn, tiles, skipDetails, onCopyPrev, flags }) {
+export function Card({ t, i, set, needsOn, tiles, skipDetails, onCopyPrev, flags, hideMustDos, hideCopyPrev }) {
   const needTypeOptions = NEEDS_TYPES.filter((n) => flags[n.key]);
   const dietOptions = DIET.filter((d) => flags.gluten || d !== 'Gluten-free / Celiac');
   const who = t.name || (i === 0 ? 'you' : `traveler ${i + 1}`);
@@ -55,7 +56,7 @@ export function Card({ t, i, set, needsOn, tiles, skipDetails, onCopyPrev, flags
         <label className="mini grow">Name<Text value={t.name} onChange={(v) => set({ name: v })} maxLength={40} placeholder={i === 0 ? 'Your name' : 'Their name'} /></label>
       </div>
       <Q label="Age range"><Tiles compact options={AGES} value={t.age} onChange={(v) => set({ age: v })} /></Q>
-      {i > 0 && !skipDetails && (
+      {i > 0 && !skipDetails && !hideCopyPrev && (
         <button type="button" className="btn btn--ghost btn--small" onClick={onCopyPrev}>Same answers as previous traveler</button>
       )}
       {!skipDetails && (
@@ -69,10 +70,12 @@ export function Card({ t, i, set, needsOn, tiles, skipDetails, onCopyPrev, flags
           <Q label={`When it comes to planning a trip, ${who} ${beVerb}\u2026`}>
             <Tiles options={HOW_PLAN} value={t.how_plan} onChange={(v) => set({ how_plan: v || '' })} />
           </Q>
-          <Q label="Must-dos on this trip" optional>
-            <StepStatus step={tiles.step} working="Finding ideas for this destination…" onRetry={tiles.retry} />
-            <MustDos value={t.must_dos} onChange={(v) => set({ must_dos: v })} tiles={tiles.list} />
-          </Q>
+          {!hideMustDos && (
+            <Q label="Must-dos on this trip" optional>
+              <StepStatus step={tiles.step} working="Finding ideas for this destination…" onRetry={tiles.retry} />
+              <MustDos value={t.must_dos} onChange={(v) => set({ must_dos: v })} tiles={tiles.list} />
+            </Q>
+          )}
           <Q label="Pace compared with the group">
             <Tiles compact options={PACE_ALIGN} value={t.pace_align || 'Matches the group'} onChange={(v) => set({ pace_align: v || 'Matches the group' })} />
           </Q>
@@ -289,6 +292,7 @@ export default function Stage3({ trip, travelers, onChange, onRun, skipDetails, 
             <span className="card-head__name">{t.name || (i === 0 ? 'You' : `Traveler ${i + 1}`)}</span>
             <span className="card-head__meta">{[t.age, ...(t.why || []), t.how_spend, t.how_plan].filter(Boolean).join(', ')}</span>
           </button>
+          {open === i && <SavedTravelerTools t={t} onFill={(prefs) => setT(i, prefs)} />}
           {open === i && (
             <Card t={t} i={i} set={(p) => setT(i, p)} needsOn={needsOn} tiles={tiles} skipDetails={skipDetails} onCopyPrev={() => copyPrev(i)} flags={flags} />
           )}

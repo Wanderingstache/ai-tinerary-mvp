@@ -267,3 +267,12 @@ tr.total td, tr.total th { font-weight: 700; border-top: 2px solid var(--ink); }
 .master-row__fields { flex: 1; min-width: 0; }
 .master-row .row { flex-wrap: wrap; }
 .master-row select.input { min-width: 0; }
+
+/* Accounts */
+.account-prompt { margin: 12px 0 20px; }
+.account-form { display: grid; gap: 10px; }
+.account-form .tiles { margin-bottom: 4px; }
+.account-settings { margin-top: 28px; }
+.account-pw { align-items: flex-end; flex-wrap: wrap; }
+.saved-tools { align-items: flex-end; flex-wrap: wrap; gap: 8px; padding: 10px 16px 0; }
+.trip-row__main.linkbtn { text-align: left; display: flex; flex-direction: column; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; }

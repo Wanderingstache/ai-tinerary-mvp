@@ -7,7 +7,7 @@ import { initDb, query, purgeFinishedTrips } from './db.js';
 import { runPricing, runTiles, runNeeds, runReviewCheck, runGenerate, startStep, startFraming, getTrip, getTripByInviteToken } from './steps.js';
 import { STEPS, MAX_GENERATIONS_PER_TRIP, NEEDS } from './settings.js';
 import { emailConfigured, sendTripLinkEmail, sendSignInEmail } from './email.js';
-import { normalizeEmail, validEmail, looksLikeToken, createSignInToken, redeemSignInToken, createSession, sessionEmail, destroySession, purgeExpiredAuth, allow } from './auth.js';
+import { normalizeEmail, validEmail, looksLikeToken, createSignInToken, redeemSignInToken, createSession, sessionEmail, destroySession, purgeExpiredAuth, allow, hashPassword, checkPassword, PASSWORD_MIN } from './auth.js';
 
 const app = express();
 app.set('trust proxy', 1); // Railway sits in front of the app; this makes req.ip the visitor's address
@@ -153,7 +153,131 @@ app.post('/api/auth/logout', wrap(async (req, res) => { await destroySession(req
 app.get('/api/me', wrap(async (req, res) => {
   const email = await sessionEmail(req);
   if (!email) return res.status(401).json({ error: 'Not signed in.' });
-  res.json({ email });
+  const a = (await query(`SELECT name, password_hash IS NOT NULL AS has_password FROM accounts WHERE email = $1`, [email])).rows[0];
+  res.json({ email, name: a?.name || '', hasPassword: !!a?.has_password });
+}));
+
+// ── Accounts (email + password) ─────────────────────────────────────────────────────────────
+// For beta clients with the passcode. The account lives only here on ai-tinerary.com and is
+// never shared with Wandering Mustache. Signing in by emailed link still works for the same
+// address, and is how someone who forgot their password gets back in to set a new one.
+const BAD_LOGIN = "That email and password don't match. Please try again.";
+const weakPassword = (pw) => (String(pw || '').length < PASSWORD_MIN ? `Please use at least ${PASSWORD_MIN} characters for your password.` : null);
+
+// Trips this browser already opened, handed over at sign-up / sign-in so they show in "My trips".
+// Only trips nobody owns yet are claimed, and only by id (someone has to have had the link).
+async function claimTrips(email, ids) {
+  const list = (Array.isArray(ids) ? ids : []).filter(isUuid).slice(0, 20);
+  if (list.length) await query(`UPDATE trips SET owner_email = $1 WHERE id = ANY($2::uuid[]) AND owner_email IS NULL`, [email, list]);
+}
+
+app.post('/api/auth/register', wrap(async (req, res) => {
+  const { email: raw, password, name, access_code, trip_ids } = req.body || {};
+  if (tooManyMisses(req)) return res.status(429).json({ error: TOO_MANY });
+  if (!codeOk(access_code)) { recordMiss(req); return res.status(403).json({ error: BAD_CODE }); }
+  const email = normalizeEmail(raw);
+  if (!validEmail(email)) return res.status(400).json({ error: "That doesn't look like a valid email address." });
+  const weak = weakPassword(password); if (weak) return res.status(400).json({ error: weak });
+  if (!allow(`register:${req.ip}`, 10, 3600 * 1000)) return res.status(429).json({ error: 'Too many tries. Please wait a while and try again.' });
+  const existing = (await query(`SELECT password_hash FROM accounts WHERE email = $1`, [email])).rows[0];
+  if (existing?.password_hash) return res.status(409).json({ error: 'There is already an account for that email. Sign in instead.' });
+  await query(
+    `INSERT INTO accounts (email, password_hash, name) VALUES ($1, $2, $3)
+     ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, name = COALESCE(EXCLUDED.name, accounts.name), updated_at = now()`,
+    [email, await hashPassword(password), String(name || '').trim().slice(0, 60) || null]);
+  await claimTrips(email, trip_ids);
+  res.json({ session: await createSession(email), email });
+}));
+
+app.post('/api/auth/login', wrap(async (req, res) => {
+  const { email: raw, password, trip_ids } = req.body || {};
+  const email = normalizeEmail(raw);
+  if (!allow(`login:${req.ip}`, 20, 15 * 60 * 1000) || !allow(`login:${email}`, 10, 15 * 60 * 1000)) {
+    return res.status(429).json({ error: 'Too many sign-in tries. Please wait 15 minutes and try again.' });
+  }
+  const a = (await query(`SELECT password_hash FROM accounts WHERE email = $1`, [email])).rows[0];
+  if (!a?.password_hash || !(await checkPassword(password, a.password_hash))) return res.status(401).json({ error: BAD_LOGIN });
+  await claimTrips(email, trip_ids);
+  res.json({ session: await createSession(email), email });
+}));
+
+// Set or change the password while signed in (also the "forgot password" path: sign in by
+// emailed link, then set a new one here).
+app.post('/api/auth/password', wrap(async (req, res) => {
+  const email = await sessionEmail(req);
+  if (!email) return res.status(401).json({ error: 'Not signed in.' });
+  const weak = weakPassword(req.body?.password); if (weak) return res.status(400).json({ error: weak });
+  await query(
+    `INSERT INTO accounts (email, password_hash) VALUES ($1, $2)
+     ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, updated_at = now()`,
+    [email, await hashPassword(req.body.password)]);
+  res.json({ ok: true });
+}));
+
+app.post('/api/my-trips/claim', wrap(async (req, res) => {
+  const email = await sessionEmail(req);
+  if (!email) return res.status(401).json({ error: 'Not signed in.' });
+  await claimTrips(email, req.body?.trip_ids);
+  res.json({ ok: true });
+}));
+
+// ── My travelers (saved people) ─────────────────────────────────────────────────────────────
+const PERSON_KEEP = ['name', 'age', 'relation', 'why', 'how_spend', 'how_plan', 'dining', 'interests', 'interests_other',
+  'pace_align', 'avoid', 'avoid_other', 'flexibility', 'activity_level', 'rhythm', 'food_adventure', 'food_dislikes',
+  'solo_time', 'observance', 'observance_other', 'alcohol', 'needs_types', 'physical', 'physical_other', 'neuro',
+  'neuro_other', 'health', 'health_other', 'diet', 'diet_other', 'gluten_level', 'gluten_answered'];
+const cleanPerson = (d = {}) => {
+  const out = {};
+  for (const k of PERSON_KEEP) if (d[k] !== undefined) out[k] = d[k];
+  out.name = String(out.name || '').trim().slice(0, 40);
+  return out;
+};
+const personOut = (r) => ({ id: r.id, is_self: r.is_self, ...r.data, updated_at: r.updated_at });
+const MAX_PEOPLE = 50;
+
+async function signedIn(req, res) {
+  const email = await sessionEmail(req);
+  if (!email) res.status(401).json({ error: 'Please sign in first.' });
+  return email;
+}
+
+app.get('/api/people', wrap(async (req, res) => {
+  const email = await signedIn(req, res); if (!email) return;
+  const r = await query(`SELECT * FROM saved_people WHERE owner_email = $1 ORDER BY is_self DESC, lower(data->>'name')`, [email]);
+  res.json({ people: r.rows.map(personOut) });
+}));
+
+app.post('/api/people', wrap(async (req, res) => {
+  const email = await signedIn(req, res); if (!email) return;
+  const data = cleanPerson(req.body);
+  if (!data.name) return res.status(400).json({ error: 'Give this traveler a name.' });
+  const n = (await query(`SELECT count(*)::int AS n FROM saved_people WHERE owner_email = $1`, [email])).rows[0].n;
+  if (n >= MAX_PEOPLE) return res.status(400).json({ error: `You can save up to ${MAX_PEOPLE} travelers.` });
+  const isSelf = !!req.body?.is_self;
+  if (isSelf) await query(`UPDATE saved_people SET is_self = false WHERE owner_email = $1`, [email]);
+  const r = await query(`INSERT INTO saved_people (id, owner_email, is_self, data) VALUES ($1, $2, $3, $4) RETURNING *`,
+    [randomUUID(), email, isSelf, JSON.stringify(data)]);
+  res.json(personOut(r.rows[0]));
+}));
+
+app.put('/api/people/:id', wrap(async (req, res) => {
+  const email = await signedIn(req, res); if (!email) return;
+  if (!isUuid(req.params.id)) return res.status(404).json({ error: 'Not found.' });
+  const data = cleanPerson(req.body);
+  if (!data.name) return res.status(400).json({ error: 'Give this traveler a name.' });
+  const isSelf = !!req.body?.is_self;
+  if (isSelf) await query(`UPDATE saved_people SET is_self = false WHERE owner_email = $1 AND id <> $2`, [email, req.params.id]);
+  const r = await query(`UPDATE saved_people SET data = $3, is_self = $4, updated_at = now() WHERE id = $1 AND owner_email = $2 RETURNING *`,
+    [req.params.id, email, JSON.stringify(data), isSelf]);
+  if (!r.rows[0]) return res.status(404).json({ error: 'Not found.' });
+  res.json(personOut(r.rows[0]));
+}));
+
+app.delete('/api/people/:id', wrap(async (req, res) => {
+  const email = await signedIn(req, res); if (!email) return;
+  if (!isUuid(req.params.id)) return res.status(404).json({ error: 'Not found.' });
+  await query(`DELETE FROM saved_people WHERE id = $1 AND owner_email = $2`, [req.params.id, email]);
+  res.json({ ok: true });
 }));
 
 app.get('/api/my-trips', wrap(async (req, res) => {

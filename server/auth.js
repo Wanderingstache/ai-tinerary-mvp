@@ -9,7 +9,9 @@
 //   so two quick clicks can't both succeed.
 // - Requesting a link is rate-limited per address and per visitor, so this can't be used to spam
 //   someone's inbox. (The caller also has to know the site passcode — see index.js.)
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, scrypt as scryptCb, timingSafeEqual } from 'crypto';
+import { promisify } from 'util';
+const scrypt = promisify(scryptCb);
 import { query } from './db.js';
 
 const SIGN_IN_MINUTES = 15;
@@ -87,3 +89,20 @@ export function allow(key, max, windowMs) {
   return true;
 }
 setInterval(() => { const now = Date.now(); for (const [k, v] of hits) if (!v.some((t) => t > now - 3600 * 1000)) hits.delete(k); }, 30 * 60 * 1000).unref();
+
+// ── Passwords (accounts) ────────────────────────────────────────────────────────────────────
+// Stored as "scrypt$<salt>$<hash>": a fresh random salt per password and a slow hash, so a copy
+// of the database doesn't reveal anyone's password. Passwords are never logged or sent anywhere.
+export const PASSWORD_MIN = 8;
+export async function hashPassword(pw) {
+  const salt = randomBytes(16).toString('base64url');
+  const hash = await scrypt(String(pw), salt, 64);
+  return `scrypt$${salt}$${hash.toString('base64url')}`;
+}
+export async function checkPassword(pw, stored) {
+  const [kind, salt, hash] = String(stored || '').split('$');
+  if (kind !== 'scrypt' || !salt || !hash) return false;
+  const want = Buffer.from(hash, 'base64url');
+  const got = await scrypt(String(pw), salt, want.length);
+  return got.length === want.length && timingSafeEqual(got, want);
+}
