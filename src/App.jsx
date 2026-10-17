@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { api } from './api.js';
-import { Route, Nav, Text, StepStatus, Brand } from './ui.jsx';
+import { Route, Nav, Text, StepStatus, Brand, BetaNote } from './ui.jsx';
 import Stage1, { stage1Problem } from './Stage1.jsx';
 import Stage2 from './Stage2.jsx';
 import Stage3 from './Stage3.jsx';
@@ -151,6 +151,7 @@ function Start({ code, onRejected }) {
       <Stage1 value={basics} onChange={setBasics} />
       {error && <p className="status status--error" role="alert">{error}</p>}
       <Nav onNext={start} nextLabel="Start planning" busy={busy} />
+      <BetaNote />
     </main>
   );
 }
@@ -558,11 +559,21 @@ function TripFlow({ id }) {
   );
 }
 
+const ADMIN_KEY_STORE = 'ait_admin_key';
 function Admin() {
-  const [key, setKey] = useState('');
+  const [key, setKey] = useState(() => { try { return sessionStorage.getItem(ADMIN_KEY_STORE) || ''; } catch { return ''; } });
+  const [builds, setBuilds] = useState(null);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
-  const load = async () => { setError(''); try { setData(await api.admin(key)); } catch (e) { setError(e.message); } };
+  const load = async () => {
+    setError('');
+    try {
+      const [d, b] = await Promise.all([api.admin(key), api.adminBuilds(key)]);
+      setData(d); setBuilds(b.builds);
+      try { sessionStorage.setItem(ADMIN_KEY_STORE, key); } catch { /* fine */ }
+    } catch (e) { setError(e.message); }
+  };
+  useEffect(() => { if (key) load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const total = data?.trips.reduce((s, t) => s + t.cost_usd, 0) || 0;
   const withItin = data?.trips.filter((t) => t.itinerary_versions > 0) || [];
   return (
@@ -585,8 +596,23 @@ function Admin() {
           <h2>By trip</h2>
           <div className="table-wrap"><table>
             <thead><tr><th>Created</th><th>Destination</th><th>Travelers</th><th>Stage</th><th>Versions</th><th>Calls</th><th>Cost</th></tr></thead>
-            <tbody>{data.trips.map((t) => <tr key={t.id}><td>{new Date(t.created_at).toLocaleDateString()}</td><td><a href={link(`/trip/${t.id}`)}>{t.destination}</a></td><td>{t.traveler_count}</td><td>{t.stage}</td><td>{t.itinerary_versions}</td><td>{t.calls}</td><td>${t.cost_usd.toFixed(3)}</td></tr>)}</tbody>
+            <tbody>{data.trips.map((t) => <tr key={t.id}><td>{new Date(t.created_at).toLocaleDateString()}</td><td>{t.destination}</td><td>{t.traveler_count}</td><td>{t.stage}</td><td>{t.itinerary_versions}</td><td>{t.calls}</td><td>${t.cost_usd.toFixed(3)}</td></tr>)}</tbody>
           </table></div>
+          <h2>Beta builds and comments ({builds?.length || 0})</h2>
+          <p className="fine">No names or email addresses here, just trip details, as promised to beta testers.</p>
+          <ul className="trip-list">
+            {(builds || []).map((t) => (
+              <li key={t.id} className="trip-row build-row">
+                <div className="trip-row__main">
+                  <strong>{t.destination}</strong>
+                  <span>{new Date(t.created_at).toLocaleDateString()} · {t.days ? `${t.days} days` : t.when} · {t.traveler_count} traveler{t.traveler_count === 1 ? '' : 's'}{t.composition ? ` (${t.composition})` : ''}</span>
+                  <span className="fine">Ages: {t.ages.join(', ') || 'not given'} · Styles: {t.travel_styles.join(', ') || 'not given'} · Gluten-free: {t.gluten_free} · Answered by: {t.intake_mode} · Versions: {t.itinerary_versions}</span>
+                  {t.feedback.map((f, i) => <span key={i} className="build-fb"><strong>{f.rating || 'Comment'}</strong>{f.comment ? `: “${f.comment}”` : ''}</span>)}
+                </div>
+                {t.has_itinerary && <a className="btn btn--ghost btn--small" href={link(`/admin/build/${t.id}`)}>View itinerary</a>}
+              </li>
+            ))}
+          </ul>
           <h2>Waitlist ({data.waitlist?.length || 0})</h2>
           <div className="table-wrap"><table>
             <thead><tr><th>Joined</th><th>Name</th><th>Email</th><th>Dreaming of</th></tr></thead>
@@ -594,6 +620,27 @@ function Admin() {
           </table></div>
         </>
       )}
+    </main>
+  );
+}
+
+// One beta build, read-only, with names and email addresses removed by the server.
+function AdminBuild({ id }) {
+  const [trip, setTrip] = useState(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let key = '';
+    try { key = sessionStorage.getItem(ADMIN_KEY_STORE) || ''; } catch { /* none */ }
+    if (!key) { setError('Open /admin and enter the admin key first.'); return; }
+    api.adminBuild(key, id).then(setTrip).catch((e) => setError(e.message));
+  }, [id]);
+  if (error) return <main className="wrap"><p className="status status--error">{error}</p><a href={link('/admin')}>Back to admin</a></main>;
+  if (!trip) return <main className="wrap"><p className="status status--working"><span className="dot" />Loading…</p></main>;
+  return (
+    <main className="wrap">
+      <p className="fine"><a href={link('/admin')}>← Back to admin</a> · Anonymous view: names show as “Traveler 1”, “Traveler 2”…</p>
+      <p className="note">{trip.traveler_count} travelers · Ages: {trip.ages.join(', ') || 'not given'} · Gluten-free: {trip.gluten_free}</p>
+      <Itinerary trip={trip} readOnly />
     </main>
   );
 }
@@ -621,6 +668,7 @@ export default function App({ pages }) {
   const signInMatch = path.match(/^\/signin\/([A-Za-z0-9_-]{43})$/);
   const isTrips = path === '/trips';
   const isAccount = path === '/account';
+  const adminBuildMatch = path.match(/^\/admin\/build\/([0-9a-f-]{36})$/i);
   const isPlan = path === '/' || path === '/plan';
   return (
     <>
@@ -631,6 +679,7 @@ export default function App({ pages }) {
         : signInMatch ? <SignInFinish key={path} token={signInMatch[1]} />
         : isTrips ? <MyTrips key={path} />
         : isAccount ? <MyTravelers key={path} />
+        : adminBuildMatch ? <AdminBuild key={path} id={adminBuildMatch[1]} />
         : path.startsWith('/admin') ? <Admin />
         : isPlan ? <Plan key={path} /> : <NotFound />}
       <footer className="foot">

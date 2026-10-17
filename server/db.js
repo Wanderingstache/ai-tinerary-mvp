@@ -101,6 +101,16 @@ export async function initDb() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     CREATE INDEX IF NOT EXISTS saved_people_owner_idx ON saved_people(owner_email);
+    -- Beta feedback left on an itinerary. Shown to the Stache on /admin with names and email
+    -- addresses scrubbed out (see anonymize() in server/index.js).
+    CREATE TABLE IF NOT EXISTS feedback (
+      id SERIAL PRIMARY KEY,
+      trip_id UUID REFERENCES trips(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      rating TEXT,
+      comment TEXT
+    );
+    CREATE INDEX IF NOT EXISTS feedback_trip_idx ON feedback(trip_id);
     CREATE TABLE IF NOT EXISTS sessions (
       token_hash TEXT PRIMARY KEY,
       email TEXT NOT NULL,

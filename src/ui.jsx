@@ -115,3 +115,10 @@ export function Brand({ large = false }) {
     </div>
   );
 }
+
+// Beta testing promise, shown wherever people start or finish a trip. Keep in step with
+// anonymize() in server/index.js, which is what actually enforces it.
+export const BETA_NOTE = 'Beta note: to make ai-tinerary better, the Stache reviews every itinerary built here and any comments you leave. We never see names or email addresses. We do see trip details, like the destination, age ranges, travel styles, and whether a plan was built gluten-free.';
+export function BetaNote() {
+  return <p className="beta-note">{BETA_NOTE}</p>;
+}

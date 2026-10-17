@@ -276,3 +276,11 @@ tr.total td, tr.total th { font-weight: 700; border-top: 2px solid var(--ink); }
 .account-pw { align-items: flex-end; flex-wrap: wrap; }
 .saved-tools { align-items: flex-end; flex-wrap: wrap; gap: 8px; padding: 10px 16px 0; }
 .trip-row__main.linkbtn { text-align: left; display: flex; flex-direction: column; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; }
+
+/* Beta note + feedback */
+.beta-note { font-size: 14px; color: var(--ink-soft); border-left: 3px solid var(--sage); padding: 4px 0 4px 12px; margin: 20px 0 8px; }
+.feedback textarea.input { width: 100%; resize: vertical; font: inherit; }
+.feedback { display: grid; gap: 10px; }
+.build-row { align-items: flex-start; }
+.build-row .trip-row__main { display: flex; flex-direction: column; gap: 2px; }
+.build-fb { font-size: 15px; }

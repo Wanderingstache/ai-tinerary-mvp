@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { api } from './api.js';
+import { Tiles, BetaNote } from './ui.jsx';
 
 const LINK_LABEL = {
   official: 'Official site',
@@ -59,7 +61,7 @@ function Block({ b }) {
   );
 }
 
-export default function Itinerary({ trip, onRegenerate, regenStep, versionsLeft }) {
+export default function Itinerary({ trip, onRegenerate, regenStep, versionsLeft, readOnly }) {
   const it = trip.itinerary;
   if (!it) return null;
   const tiers = {};
@@ -78,14 +80,14 @@ export default function Itinerary({ trip, onRegenerate, regenStep, versionsLeft 
           Sourcing: {['Stached', 'Scouted', 'Vetted', 'AI-ed'].map((t) => `${t} ${tiers[t] || 0}`).join(', ')}.
           {' '}Built {new Date(it.generated_at).toLocaleDateString()}. Verify tickets, reservations and opening days before you go.
         </p>
-        <div className="actions no-print">
+        {!readOnly && <div className="actions no-print">
           <button type="button" className="btn" onClick={() => window.print()}>Save as PDF</button>
           <button type="button" className="btn btn--ghost" onClick={copyLink}>Copy link to share</button>
           <button type="button" className="btn btn--ghost" onClick={onRegenerate} disabled={regenStep?.status === 'running' || versionsLeft <= 0}>
             {regenStep?.status === 'running' ? 'Rebuilding…' : `Rebuild (${versionsLeft} left)`}
           </button>
-        </div>
-        <p className="fine no-print">Anyone with this link can view and change this trip. Share it only with your group.</p>
+        </div>}
+        {!readOnly && <p className="fine no-print">Anyone with this link can view and change this trip. Share it only with your group.</p>}
       </header>
 
       {(it.notes?.length > 0 || it.safety_notes?.length > 0) && (
@@ -141,6 +143,33 @@ export default function Itinerary({ trip, onRegenerate, regenStep, versionsLeft 
       )}
 
       <p className="fine">This itinerary was researched with AI and live web search. Places marked AI-ed have not been personally verified by Wandering Mustache.</p>
+      {!readOnly && <FeedbackBox tripId={trip.id} />}
     </article>
+  );
+}
+
+// "Tell the Stache how we did": beta feedback on a finished itinerary. Read by the Stache on
+// /admin with names and email addresses removed.
+function FeedbackBox({ tripId }) {
+  const [rating, setRating] = useState('');
+  const [comment, setComment] = useState('');
+  const [state, setState] = useState(''); // '' | sending | sent
+  const [error, setError] = useState('');
+  const send = async () => {
+    setState('sending'); setError('');
+    try { await api.feedback(tripId, { rating, comment }); setState('sent'); } catch (e) { setError(e.message); setState(''); }
+  };
+  if (state === 'sent') return <section className="itin__box feedback no-print"><h2>Thank you!</h2><p>The Stache reads every note. You can leave another anytime.</p><button type="button" className="linkbtn" onClick={() => { setRating(''); setComment(''); setState(''); }}>Leave another note</button></section>;
+  return (
+    <section className="itin__box feedback no-print">
+      <h2>Tell the Stache how we did</h2>
+      <Tiles compact options={['Loved it', 'Pretty good', 'Needs work']} value={rating} onChange={setRating} />
+      <label className="mini">Anything that worked, missed, or surprised you? <span className="q__optional">(optional)</span>
+        <textarea className="input" rows={4} maxLength={3000} value={comment} onChange={(e) => setComment(e.target.value)} />
+      </label>
+      {error && <p className="status status--error" role="alert">{error}</p>}
+      <button type="button" className="btn" onClick={send} disabled={state === 'sending' || (!rating && !comment.trim())}>{state === 'sending' ? 'Sending…' : 'Send to the Stache'}</button>
+      <BetaNote />
+    </section>
   );
 }

@@ -433,6 +433,109 @@ app.get('/api/admin/trips', wrap(async (req, res) => {
   res.json({ trips: trips.rows, steps: bySteps.rows.map((r) => ({ ...r, label: labels[r.step] || r.step })), waitlist: waitlist.rows });
 }));
 
+// ── Beta feedback + the Stache's anonymous review ───────────────────────────────────────────
+// Promise to beta testers (shown on the site): the Stache sees every itinerary built and every
+// comment, but never names or email addresses. Trip details stay: destination, dates/length,
+// age ranges, travel styles, and whether the plan was gluten-free. Everything the admin pages
+// show about a trip goes through anonymize() first.
+const RATINGS = ['Loved it', 'Pretty good', 'Needs work'];
+
+app.post('/api/trips/:id/feedback', wrap(async (req, res) => {
+  if (!isUuid(req.params.id)) return res.status(404).json({ error: 'Trip not found' });
+  const trip = await getTrip(req.params.id);
+  if (!trip) return res.status(404).json({ error: 'Trip not found' });
+  if (!allow(`feedback:${req.ip}`, 20, 3600 * 1000)) return res.status(429).json({ error: 'Thanks! That’s plenty for now.' });
+  const rating = RATINGS.includes(req.body?.rating) ? req.body.rating : null;
+  const comment = String(req.body?.comment || '').trim().slice(0, 3000);
+  if (!rating && !comment) return res.status(400).json({ error: 'Pick a rating or write a comment.' });
+  await query(`INSERT INTO feedback (trip_id, rating, comment) VALUES ($1, $2, $3)`, [trip.id, rating, comment || null]);
+  res.json({ ok: true });
+}));
+
+const escapeRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const EMAIL_RE = /[^\s@<>()]+@[^\s@<>()]+\.[^\s@<>()]+/g;
+// Replaces every traveler name (and the organizer's name) with "Traveler N", and any email
+// address with "[email]", anywhere in a JSON-able value.
+function scrubber(trip) {
+  const names = new Map();
+  (trip.travelers || []).forEach((t, i) => {
+    for (const part of [t.name, ...String(t.name || '').split(/\s+/)]) {
+      const n = String(part || '').trim();
+      if (n.length >= 2 && !/^traveler\s*\d*$/i.test(n) && !names.has(n.toLowerCase())) names.set(n.toLowerCase(), `Traveler ${i + 1}`);
+    }
+  });
+  const org = String(trip.basics?.organizer_name || '').trim();
+  if (org.length >= 2 && !names.has(org.toLowerCase())) names.set(org.toLowerCase(), 'the organizer');
+  const list = [...names.entries()].sort((a, b) => b[0].length - a[0].length); // full names before first names
+  const fix = (str) => {
+    let out = String(str).replace(EMAIL_RE, '[email]');
+    for (const [n, label] of list) out = out.replace(new RegExp(`\\b${escapeRe(n)}\\b`, 'gi'), label);
+    return out;
+  };
+  const walk = (v) => (typeof v === 'string' ? fix(v) : Array.isArray(v) ? v.map(walk) : v && typeof v === 'object'
+    ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)])) : v);
+  return walk;
+}
+
+function tripDaysOf(t) {
+  if (t.start_date && t.end_date) return Math.round((new Date(t.end_date) - new Date(t.start_date)) / 86400000) + 1;
+  return t.day_count || null;
+}
+const tally = (arr) => Object.entries(arr.reduce((m, x) => { if (x) m[x] = (m[x] || 0) + 1; return m; }, {}))
+  .map(([k, n]) => (n > 1 ? `${k} ×${n}` : k));
+
+// What the Stache sees about one trip: no names, no emails, no owner, no invite links.
+function anonymize(trip, feedback = []) {
+  const trs = trip.travelers || [];
+  const gluten = trs.filter((t) => (t.diet || []).includes('Gluten-free / Celiac'));
+  const scrub = scrubber(trip);
+  const b = trip.basics || {};
+  const g = trip.group_answers || {};
+  return {
+    id: trip.id,
+    created_at: trip.created_at,
+    destination: trip.destination,
+    when: trip.start_date ? `${trip.start_date} to ${trip.end_date}` : (b.approx_month || 'dates not set'),
+    days: tripDaysOf(trip),
+    traveler_count: trs.length || Number(b.traveler_count) || 1,
+    composition: b.composition || '',
+    purpose: b.purpose || [],
+    tier: g.tier || '',
+    intake_mode: g.intake_mode || 'organizer',
+    ages: tally(trs.map((t) => t.age)),
+    travel_styles: tally(trs.flatMap((t) => [...(t.why || []), t.how_spend, t.how_plan])),
+    gluten_free: gluten.length ? `${gluten.length} traveler${gluten.length === 1 ? '' : 's'}${gluten[0].gluten_level ? ` (${gluten[0].gluten_level})` : ''}` : 'No',
+    stage: trip.stage,
+    itinerary_versions: trip.itinerary_versions,
+    feedback: feedback.map((f) => ({ created_at: f.created_at, rating: f.rating, comment: f.comment ? scrub(f.comment) : '' })),
+    itinerary: trip.itinerary ? scrub(trip.itinerary) : null,
+  };
+}
+
+const adminOk = (req, res) => {
+  if (!ADMIN_KEY || req.get('x-admin-key') !== ADMIN_KEY) { res.status(403).json({ error: 'Wrong admin key.' }); return false; }
+  return true;
+};
+
+app.get('/api/admin/builds', wrap(async (req, res) => {
+  if (!adminOk(req, res)) return;
+  const trips = (await query(`
+    SELECT t.* FROM trips t
+    WHERE t.itinerary_versions > 0 OR EXISTS (SELECT 1 FROM feedback f WHERE f.trip_id = t.id)
+    ORDER BY t.created_at DESC LIMIT 200`)).rows;
+  const fb = (await query(`SELECT * FROM feedback WHERE trip_id = ANY($1::uuid[]) ORDER BY created_at`, [trips.map((t) => t.id)])).rows;
+  res.json({ builds: trips.map((t) => { const { itinerary, ...rest } = anonymize(t, fb.filter((f) => f.trip_id === t.id)); return { ...rest, has_itinerary: !!itinerary }; }) });
+}));
+
+app.get('/api/admin/builds/:id', wrap(async (req, res) => {
+  if (!adminOk(req, res)) return;
+  if (!isUuid(req.params.id)) return res.status(404).json({ error: 'Not found' });
+  const trip = await getTrip(req.params.id);
+  if (!trip) return res.status(404).json({ error: 'Not found' });
+  const fb = (await query(`SELECT * FROM feedback WHERE trip_id = $1 ORDER BY created_at`, [trip.id])).rows;
+  res.json(anonymize(trip, fb));
+}));
+
 // The website (built by `npm run build` into /dist).
 const dist = path.join(__dirname, '..', 'dist');
 // Front door: "/" is the Plan a trip page (the passcode gateway, then the intake). "The Truth About

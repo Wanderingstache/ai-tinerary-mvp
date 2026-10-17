@@ -37,5 +37,8 @@ export const api = {
   addPerson: (p) => call('POST', '/api/people', p),
   updatePerson: (id, p) => call('PUT', `/api/people/${id}`, p),
   deletePerson: (id) => call('DELETE', `/api/people/${id}`),
+  feedback: (id, body) => call('POST', `/api/trips/${id}/feedback`, body),
+  adminBuilds: (key) => call('GET', '/api/admin/builds', null, { 'x-admin-key': key }),
+  adminBuild: (key, id) => call('GET', `/api/admin/builds/${id}`, null, { 'x-admin-key': key }),
   emailTravelerLink: (id, travelerId, email) => call('POST', `/api/trips/${id}/travelers/${travelerId}/email-link`, { email }),
 };

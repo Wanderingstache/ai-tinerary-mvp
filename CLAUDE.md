@@ -8,6 +8,17 @@ See README.md for how the code is organized.
 
 ## Decisions (newest first)
 
+### 2026-10-17 — Beta note, feedback, and the Stache's anonymous review
+- Promise to beta testers (`BETA_NOTE` in `src/ui.jsx`, shown on the Plan page and with the feedback
+  box): the Stache reviews every itinerary built and every comment, but never sees names or email
+  addresses. Trip details (destination, dates/length, age ranges, travel styles, gluten-free) are seen.
+- Itinerary pages end with "Tell the Stache how we did" (Loved it / Pretty good / Needs work + comment),
+  saved in the `feedback` table.
+- /admin "Beta builds and comments" and /admin/build/<id> go through `anonymize()` in server/index.js:
+  traveler and organizer names become "Traveler N" / "the organizer", emails become "[email]",
+  and owner emails / invite links are never sent. Don't add admin views that bypass it.
+  The old cost table no longer links to the live trip page (that page shows names).
+
 ### 2026-10-17 — Accounts (email + password) and My travelers
 - Beta clients (with the passcode) can create an account: email + password, optional first name.
   Accounts live ONLY in ai-tinerary's database and are never shared with Wandering Mustache — say
