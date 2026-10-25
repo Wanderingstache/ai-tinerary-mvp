@@ -8,6 +8,19 @@ See README.md for how the code is organized.
 
 ## Decisions (newest first)
 
+### 2026-10-25 — Multi-city trips (beta)
+- Trip basics: "One place" or "Multi-city (up to 4)". Travelers list cities in order with nights in each
+  (`basics.trip_type = 'multi'`, `basics.stops = [{city, nights}]`). With dates, nights must add up to the
+  dates; with "Not sure yet", day_count = total nights + 1. Max 30 nights. MAX_STOPS lives in
+  `src/options.js` and `server/index.js` — keep in step.
+- `trip.destination` for a multi-city trip is the route string ("Rome, Italy → Florence, Italy"), so every
+  list and page keeps working. `routeOf(trip)` in `server/steps.js` gives each stop's arrive/leave day + dates.
+- Research stays the same number of calls: one framing call covers every city (sights/neighborhoods tagged
+  with "city"); pricing gives one night-weighted set of numbers plus `transfers` (mode, time, cost per leg).
+- Itinerary: each day has "city"; moving days get a "Travel to …" block with mode/time/cost (no flights —
+  still out of scope); "stay" gives 2–3 options per city. Maps, Wander Map matching and Airbnb searches use
+  the option's own city and that stop's dates.
+
 ### 2026-10-17 — Account access through beta, and credit alerts
 - Signed-in account holders can create trips without the passcode (`BETA_ACCOUNT_ACCESS`, default on;
   set to 0 in Railway when beta ends). The per-trip rebuild cap (MAX_GENERATIONS_PER_TRIP) still applies.

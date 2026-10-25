@@ -70,6 +70,8 @@ export default function Itinerary({ trip, onRegenerate, regenStep, versionsLeft,
   (it.days || []).forEach((d) => d.blocks?.forEach((b) => { b.options?.forEach(count); b.split?.forEach((s) => s.options?.forEach(count)); }));
 
   const copyLink = () => navigator.clipboard?.writeText(window.location.href);
+  // Multi-city: lodging grouped by city, in the order the cities first appear.
+  const stayCities = [...new Set((it.stay || []).map((o) => o.city || ''))].filter(Boolean);
 
   return (
     <article className="itin">
@@ -100,7 +102,14 @@ export default function Itinerary({ trip, onRegenerate, regenStep, versionsLeft,
       {it.stay?.length > 0 && (
         <section className="itin__box">
           <h2>Where to stay</h2>
-          <ul className="opts">{it.stay.map((o, i) => <Option key={i} o={{ ...o, note: [o.area, o.why].filter(Boolean).join('. ') }} />)}</ul>
+          {stayCities.length > 1 ? stayCities.map((c) => (
+            <div key={c} className="city-group">
+              <h3>{c}</h3>
+              <ul className="opts">{it.stay.filter((o) => (o.city || '') === c || (!o.city && c === stayCities[0])).map((o, i) => <Option key={i} o={{ ...o, note: [o.area, o.why].filter(Boolean).join('. ') }} />)}</ul>
+            </div>
+          )) : (
+            <ul className="opts">{it.stay.map((o, i) => <Option key={i} o={{ ...o, note: [o.area, o.why].filter(Boolean).join('. ') }} />)}</ul>
+          )}
         </section>
       )}
 
@@ -110,7 +119,7 @@ export default function Itinerary({ trip, onRegenerate, regenStep, versionsLeft,
 
       {(it.days || []).map((d) => (
         <section key={d.day} id={`day-${d.day}`} className="day">
-          <h2 className="day__title">Day {d.day}{d.title ? `: ${d.title}` : ''}</h2>
+          <h2 className="day__title">Day {d.day}{d.title ? `: ${d.title}` : ''}{d.city && <span className="day__city"> · {d.city}</span>}</h2>
           {(d.date || d.areas?.length > 0) && <p className="day__meta">{[d.date, (d.areas || []).join(', ')].filter(Boolean).join('. ')}</p>}
           {(d.blocks || []).map((b, i) => <Block key={i} b={b} />)}
         </section>

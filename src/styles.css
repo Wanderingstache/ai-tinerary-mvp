@@ -284,3 +284,13 @@ tr.total td, tr.total th { font-weight: 700; border-top: 2px solid var(--ink); }
 .build-row { align-items: flex-start; }
 .build-row .trip-row__main { display: flex; flex-direction: column; gap: 2px; }
 .build-fb { font-size: 15px; }
+
+/* Multi-city stops */
+.stops { display: grid; gap: 10px; margin-top: 10px; }
+.stops__row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; background: var(--paper); border: 1px solid var(--line); border-left: 6px solid var(--rope); border-radius: 12px; padding: 10px 12px; }
+.stops__row .card-head__num { align-self: center; }
+.stops__nights { width: 90px; }
+.stops__nights .input { width: 100%; }
+.city-group { margin-top: 14px; }
+.city-group > h3 { margin: 0 0 6px; }
+.day__city { font-size: 0.8em; color: var(--leather); font-weight: 600; letter-spacing: .02em; }

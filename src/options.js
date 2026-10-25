@@ -44,6 +44,15 @@ export const MUST_AVOID_CATS = ['Long travel days', 'Early mornings', 'Crowded t
 
 // Largest group the intake accepts. The server enforces the same number (server/index.js).
 export const MAX_TRAVELERS = 30;
+// Multi-city trips: 2 to MAX_STOPS cities, each with a number of nights (kept in step with server/index.js).
+export const MAX_STOPS = 4;
+
+// Nights between two YYYY-MM-DD dates (0 if either is missing).
+export function nightsBetween(a, b) {
+  if (!a || !b) return 0;
+  return Math.round((new Date(`${b}T00:00:00Z`) - new Date(`${a}T00:00:00Z`)) / 86400000);
+}
+export const stopNights = (stops = []) => stops.reduce((n, s) => n + (Math.round(Number(s.nights)) || 0), 0);
 
 export const AGES = ['Under 18', '18–24', '25–34', '35–44', '45–54', '55–64', '65+'];
 // Matches the Wandering Mustache travel-style quiz: WHY someone travels (their motivation) is

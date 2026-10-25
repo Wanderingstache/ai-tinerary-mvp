@@ -49,19 +49,46 @@ const wrap = (fn) => (req, res) => fn(req, res).catch((e) => {
 
 // Largest group the intake accepts — keep in step with MAX_TRAVELERS in src/options.js.
 const MAX_TRAVELERS = 30;
+// Multi-city: 2 to MAX_STOPS cities in order, each with a whole number of nights (1–30).
+// Keep in step with MAX_STOPS in src/options.js.
+const MAX_STOPS = 4;
 function cleanBasics(b = {}) {
   const n = Math.round(Number(b.traveler_count)) || 1;
-  return { ...b, traveler_count: Math.max(1, Math.min(MAX_TRAVELERS, n)) };
+  const out = { ...b, traveler_count: Math.max(1, Math.min(MAX_TRAVELERS, n)) };
+  if (b.trip_type === 'multi') {
+    out.stops = (Array.isArray(b.stops) ? b.stops : [])
+      .map((x) => ({ city: String(x?.city || '').trim().slice(0, 60), nights: Math.max(1, Math.min(30, Math.round(Number(x?.nights)) || 1)) }))
+      .filter((x) => x.city).slice(0, MAX_STOPS);
+    if (out.stops.length < 2) out.trip_type = 'single';
+  }
+  return out;
 }
+const isMulti = (b = {}) => b.trip_type === 'multi' && Array.isArray(b.stops) && b.stops.length >= 2;
 
-function datesFromBasics(b = {}) {
+function datesFromBasics(raw = {}) {
+  const b = cleanBasics(raw);
   const hasDates = b.date_mode !== 'days' && b.start_date && b.end_date;
+  const multi = isMulti(b);
+  const nights = multi ? b.stops.reduce((n, x) => n + x.nights, 0) : 0;
   return {
-    destination: (b.destination || '').trim(),
+    // A multi-city trip's "destination" is its route, e.g. "Rome, Italy → Florence, Italy", so
+    // every page and list that shows the destination shows the whole trip.
+    destination: multi ? b.stops.map((x) => x.city).join(' → ') : (b.destination || '').trim(),
     start_date: hasDates ? b.start_date : null,
     end_date: hasDates ? b.end_date : null,
-    day_count: hasDates ? null : Math.max(1, Math.min(30, Number(b.day_count) || 3)),
+    day_count: hasDates ? null : multi ? Math.min(31, nights + 1) : Math.max(1, Math.min(30, Number(b.day_count) || 3)),
+    nights,
+    multi,
   };
+}
+function multiProblem(d) {
+  if (!d.multi) return null;
+  if (d.nights > 30) return 'Multi-city trips can be up to 30 nights for now.';
+  if (d.start_date && d.end_date) {
+    const n = Math.round((new Date(`${d.end_date}T00:00:00Z`) - new Date(`${d.start_date}T00:00:00Z`)) / 86400000);
+    if (n !== d.nights) return `Your dates cover ${n} nights, but the cities add up to ${d.nights}. Make them match.`;
+  }
+  return null;
 }
 
 function kickOffStage1(id) {
@@ -310,6 +337,7 @@ app.post('/api/trips', wrap(async (req, res) => {
   }
   const d = datesFromBasics(basics);
   if (!d.destination) return res.status(400).json({ error: 'Enter a destination to continue.' });
+  const mp = multiProblem(d); if (mp) return res.status(400).json({ error: mp });
   if (d.start_date && d.end_date && d.end_date < d.start_date) return res.status(400).json({ error: 'The end date is before the start date.' });
   const id = randomUUID();
   const owner = await sessionEmail(req); // null when not signed in — trips work fine without it
@@ -346,6 +374,7 @@ app.put('/api/trips/:id', wrap(async (req, res) => {
   if (b.basics) {
     const d = datesFromBasics(b.basics);
     if (!d.destination) return res.status(400).json({ error: 'Enter a destination to continue.' });
+    const mp = multiProblem(d); if (mp) return res.status(400).json({ error: mp });
     placeChanged = d.destination !== trip.destination || d.start_date !== trip.start_date || d.end_date !== trip.end_date || d.day_count !== trip.day_count;
     add('basics', JSON.stringify(cleanBasics(b.basics)));
     add('destination', d.destination); add('start_date', d.start_date); add('end_date', d.end_date); add('day_count', d.day_count);

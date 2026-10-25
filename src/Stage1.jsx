@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
 import { Q, Tiles, Text } from './ui.jsx';
-import { COMPOSITION, PURPOSE, SPLIT_FREQ, MAX_TRAVELERS } from './options.js';
+import { COMPOSITION, PURPOSE, SPLIT_FREQ, MAX_TRAVELERS, MAX_STOPS, nightsBetween, stopNights } from './options.js';
 
 // Stage 1 · Trip basics. Used on the start page and when editing later.
 export default function Stage1({ value: b, onChange }) {
   const set = (patch) => onChange({ ...b, ...patch });
   const count = Number(b.traveler_count) || 1;
+  const multi = b.trip_type === 'multi';
+  const stops = b.stops?.length ? b.stops : [{ city: '', nights: '' }, { city: '', nights: '' }];
+  const setStop = (i, patch) => set({ stops: stops.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+  const totalNights = stopNights(stops);
+  const dateNights = (b.date_mode || 'dates') === 'dates' ? nightsBetween(b.start_date, b.end_date) : 0;
+  const routeSummary = !totalNights ? 'Add nights for each city.'
+    : dateNights > 0 && dateNights !== totalNights
+      ? `That's ${totalNights} night${totalNights === 1 ? '' : 's'}, but your dates cover ${dateNights}. Adjust the nights or the dates so they match.`
+      : `${totalNights} night${totalNights === 1 ? '' : 's'} in total${(b.date_mode || 'dates') === 'days' ? ` (a ${totalNights + 1}-day trip)` : ''}.`;
   // The "5+" box starts EMPTY. It used to start filled with "5", so typing "12" into it gave
   // "512" and got clamped to the maximum, or the 5 quietly stayed. Now whatever is typed counts as
   // soon as it's a valid number, and a line underneath confirms the number we'll plan for.
@@ -17,8 +26,41 @@ export default function Stage1({ value: b, onChange }) {
         <Text value={b.organizer_name} onChange={(v) => set({ organizer_name: v })} placeholder="The trip organizer" maxLength={60} />
       </Q>
 
-      <Q label="Where are you going?" help="One destination for now. Multi-city trips are coming in a later version.">
-        <Text value={b.destination} onChange={(v) => set({ destination: v })} placeholder="City and country, e.g. Rome, Italy" maxLength={80} />
+      <Q label="Where are you going?">
+        <Tiles compact options={[{ key: 'single', label: 'One place' }, { key: 'multi', label: `Multi-city (up to ${MAX_STOPS})` }]}
+          value={multi ? 'multi' : 'single'}
+          onChange={(v) => {
+            if (v === 'multi') {
+              const first = (b.destination || '').trim();
+              const stops = b.stops?.length >= 2 ? b.stops : [{ city: first, nights: '' }, { city: '', nights: '' }];
+              set({ trip_type: 'multi', stops });
+            } else {
+              set({ trip_type: 'single', destination: (b.stops || []).find((x) => (x.city || '').trim())?.city || b.destination || '' });
+            }
+          }} />
+        {!multi ? (
+          <Text value={b.destination} onChange={(v) => set({ destination: v })} placeholder="City and country, e.g. Rome, Italy" maxLength={80} />
+        ) : (
+          <div className="stops">
+            <p className="q__help">List the cities in the order you'll visit them, and how many nights in each.</p>
+            {stops.map((st, i) => (
+              <div className="stops__row" key={i}>
+                <span className="card-head__num">{i + 1}</span>
+                <label className="mini grow">City
+                  <Text value={st.city} onChange={(v) => setStop(i, { city: v })} placeholder={i === 0 ? 'e.g. Rome, Italy' : 'e.g. Florence, Italy'} maxLength={60} />
+                </label>
+                <label className="mini stops__nights">Nights
+                  <Text type="number" min={1} max={30} value={st.nights} onChange={(v) => setStop(i, { nights: v })} placeholder="3" />
+                </label>
+                {stops.length > 2 && <button type="button" className="linkbtn" aria-label={`Remove stop ${i + 1}`} onClick={() => set({ stops: stops.filter((_, j) => j !== i) })}>Remove</button>}
+              </div>
+            ))}
+            {stops.length < MAX_STOPS && (
+              <button type="button" className="btn btn--ghost btn--small" onClick={() => set({ stops: [...stops, { city: '', nights: '' }] })}>+ Add a city</button>
+            )}
+            <p className="fine">{routeSummary}</p>
+          </div>
+        )}
       </Q>
 
       <Q label="When are you going?">
@@ -31,7 +73,7 @@ export default function Stage1({ value: b, onChange }) {
           </div>
         ) : (
           <div className="row">
-            <label className="mini">How many days?<Text type="number" min={1} max={30} value={b.day_count} onChange={(v) => set({ day_count: v })} placeholder="3" /></label>
+            {!multi && <label className="mini">How many days?<Text type="number" min={1} max={30} value={b.day_count} onChange={(v) => set({ day_count: v })} placeholder="3" /></label>}
             <label className="mini">Roughly when?<Text value={b.approx_month} onChange={(v) => set({ approx_month: v })} placeholder="e.g. May, or spring" maxLength={30} /></label>
           </div>
         )}
@@ -106,7 +148,18 @@ export default function Stage1({ value: b, onChange }) {
 }
 
 export function stage1Problem(b) {
-  if (!(b.destination || '').trim()) return 'Enter a destination.';
+  if (b.trip_type === 'multi') {
+    const stops = (b.stops || []).filter((x) => (x.city || '').trim());
+    if (stops.length < 2) return 'Add at least two cities, or choose "One place".';
+    if (stops.length > MAX_STOPS) return `Up to ${MAX_STOPS} cities per trip for now.`;
+    if (stops.some((x) => !(Math.round(Number(x.nights)) >= 1))) return 'Add how many nights for each city (at least 1).';
+    const total = stopNights(stops);
+    if (total > 30) return 'Multi-city trips can be up to 30 nights for now.';
+    if ((b.date_mode || 'dates') === 'dates' && b.start_date && b.end_date) {
+      const n = nightsBetween(b.start_date, b.end_date);
+      if (n !== total) return `Your dates cover ${n} night${n === 1 ? '' : 's'}, but the cities add up to ${total}. Make them match.`;
+    }
+  } else if (!(b.destination || '').trim()) return 'Enter a destination.';
   if ((b.date_mode || 'dates') === 'dates') {
     if (!b.start_date || !b.end_date) return 'Add your arrival and departure dates, or choose "Not sure yet".';
     if (b.end_date < b.start_date) return 'The leave date is before the arrive date.';

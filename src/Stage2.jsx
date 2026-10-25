@@ -10,49 +10,73 @@ const money = (cur, r) => (r ? `${cur ? cur + ' ' : ''}${Number(r.low).toLocaleS
 // never a guessed address — no AI call, so it costs nothing and can't be wrong about the URL.
 const mapsUrl = (name, destination) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name}, ${destination}`)}`;
 
+const sameCity = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+
+function GlanceLists({ sights = [], neighborhoods = [], place, promoted, onTogglePromote }) {
+  return (
+    <div className="glance">
+      <div>
+        <h3>Sights</h3>
+        <p className="fine">Add any of these as a must-do option for travelers to choose from in the next step.</p>
+        <ul className="plain">
+          {sights.map((x) => {
+            const on = promoted.includes(x.name);
+            return (
+              <li key={x.name}>
+                <strong>{x.name}</strong>. {x.why}{x.book_ahead && <span className="chip">Book ahead</span>}
+                <span className="glance__links">
+                  <a href={mapsUrl(x.name, x.city || place)} target="_blank" rel="noopener noreferrer">Map</a>
+                  {/^https?:\/\//i.test(x.official_site || '') && <a href={x.official_site} target="_blank" rel="noopener noreferrer">Official site</a>}
+                  <button type="button" className={`linkbtn ${on ? 'is-added' : ''}`} onClick={() => onTogglePromote(x.name)}>
+                    {on ? '✓ Added as an option' : '+ Add as an option'}
+                  </button>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <div>
+        <h3>Neighborhoods</h3>
+        <ul className="plain">
+          {neighborhoods.map((x) => (
+            <li key={x.name}>
+              <strong>{x.name}</strong>. {x.character}{' '}
+              <a href={mapsUrl(x.name, x.city || place)} target="_blank" rel="noopener noreferrer">Map</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 function Framing({ trip, onRun, promoted, onTogglePromote }) {
   const s = trip.research?.sights;
   const b = trip.research?.budget;
+  // Multi-city: the route's cities, in order; sights the model tagged with a city we don't
+  // recognize still show, under the first city, rather than disappearing.
+  const stops = trip.basics?.trip_type === 'multi' ? (trip.basics.stops || []).map((x) => x.city).filter(Boolean) : [];
+  const cities = stops.length > 1 ? stops : [];
+  if (cities.length > 1 && s?.result) {
+    const known = (x) => cities.some((c) => sameCity(c, x.city));
+    s.result.sights?.forEach((x) => { if (!known(x)) x.city = cities[0]; });
+    s.result.neighborhoods?.forEach((x) => { if (!known(x)) x.city = cities[0]; });
+  }
   return (
     <section className="panel">
       <h2 className="panel__title">{trip.destination} at a glance</h2>
       <StepStatus step={s} working="Gathering the sights people plan around…" onRetry={() => onRun('sights')}>
-        {s?.result && (
-          <div className="glance">
-            <div>
-              <h3>Sights</h3>
-              <p className="fine">Add any of these as a must-do option for travelers to choose from in the next step.</p>
-              <ul className="plain">
-                {s.result.sights?.map((x) => {
-                  const on = promoted.includes(x.name);
-                  return (
-                    <li key={x.name}>
-                      <strong>{x.name}</strong>. {x.why}{x.book_ahead && <span className="chip">Book ahead</span>}
-                      <span className="glance__links">
-                        <a href={mapsUrl(x.name, trip.destination)} target="_blank" rel="noopener noreferrer">Map</a>
-                        {/^https?:\/\//i.test(x.official_site || '') && <a href={x.official_site} target="_blank" rel="noopener noreferrer">Official site</a>}
-                        <button type="button" className={`linkbtn ${on ? 'is-added' : ''}`} onClick={() => onTogglePromote(x.name)}>
-                          {on ? '✓ Added as an option' : '+ Add as an option'}
-                        </button>
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+        {s?.result && (cities.length > 1
+          ? cities.map((c) => (
+            <div key={c} className="city-group">
+              <h3>{c}</h3>
+              <GlanceLists sights={(s.result.sights || []).filter((x) => sameCity(x.city, c))}
+                neighborhoods={(s.result.neighborhoods || []).filter((x) => sameCity(x.city, c))}
+                place={c} promoted={promoted} onTogglePromote={onTogglePromote} />
             </div>
-            <div>
-              <h3>Neighborhoods</h3>
-              <ul className="plain">
-                {s.result.neighborhoods?.map((x) => (
-                  <li key={x.name}>
-                    <strong>{x.name}</strong>. {x.character}{' '}
-                    <a href={mapsUrl(x.name, trip.destination)} target="_blank" rel="noopener noreferrer">Map</a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
+          ))
+          : <GlanceLists sights={s.result.sights} neighborhoods={s.result.neighborhoods} place={trip.destination} promoted={promoted} onTogglePromote={onTogglePromote} />)}
       </StepStatus>
       <StepStatus step={b} working="Sketching what things cost…" onRetry={() => onRun('budget')}>
         {b?.result && (
@@ -84,6 +108,16 @@ function PricingCard({ p }) {
           </tbody>
         </table>
       </div>
+      {p.transfers?.length > 0 && (
+        <>
+          <h3>Getting between cities</h3>
+          <ul className="plain context">
+            {p.transfers.map((x, i) => (
+              <li key={i}><strong>{x.from} → {x.to}:</strong> {[x.mode, x.duration, x.price_per_person && `${x.price_per_person} per person`].filter(Boolean).join(', ')}{x.notes ? `. ${x.notes}` : ''}</li>
+            ))}
+          </ul>
+        </>
+      )}
       <p className="fine">Daily estimate assumes two people sharing a room, and one car shared by two when the transport is private. Transport assumes public transport up to 3-Star, a mix of private and public at 4-Star, and private only at 5-Star. Airfare not included.</p>
       {p.context && (
         <ul className="plain context">

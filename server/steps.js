@@ -75,10 +75,35 @@ function when(trip) {
   return `${tripDays(trip)} days${b.approx_month ? `, around ${b.approx_month}` : ', dates not set'}`;
 }
 
+// ── Multi-city ──────────────────────────────────────────────────────────
+// A multi-city trip keeps its ordered stops in basics.stops ([{city, nights}]). routeOf() turns
+// that into day numbers (and real dates when the trip has them): day 1 is arrival in the first
+// city; a stop of N nights runs from its arrive_day to its leave_day (= the next stop's arrival,
+// which is the travel day between them). Returns null for a single-destination trip.
+export function routeOf(trip) {
+  const b = trip.basics || {};
+  if (b.trip_type !== 'multi') return null;
+  const stops = (b.stops || []).filter((x) => (x.city || '').trim());
+  if (stops.length < 2) return null;
+  const start = trip.start_date ? new Date(`${trip.start_date}T00:00:00Z`) : null;
+  const dayDate = (d) => { if (!start) return null; const x = new Date(start); x.setUTCDate(x.getUTCDate() + d - 1); return x.toISOString().slice(0, 10); };
+  let day = 1;
+  return stops.map((x) => {
+    const nights = Math.max(1, Math.round(Number(x.nights)) || 1);
+    const stop = { city: x.city.trim(), nights, arrive_day: day, leave_day: day + nights, arrive: dayDate(day), leave: dayDate(day + nights) };
+    day += nights;
+    return stop;
+  });
+}
+const routeLine = (r) => r.map((x) => `${x.city}: ${x.nights} night${x.nights === 1 ? '' : 's'} (day ${x.arrive_day}${x.arrive ? ` ${x.arrive}` : ''} → day ${x.leave_day}${x.leave ? ` ${x.leave}` : ''})`).join('; then ');
+// "in Rome, Italy" or "in each city on this route: Rome, Italy; Florence, Italy"
+const placeText = (trip) => { const r = routeOf(trip); return r ? `each city on this route (${r.map((x) => x.city).join('; ')})` : trip.destination; };
+
 function basicsText(trip) {
   const b = trip.basics || {};
+  const route = routeOf(trip);
   return [
-    `Destination: ${trip.destination}`,
+    route ? `Multi-city trip, in this order — ${routeLine(route)}` : `Destination: ${trip.destination}`,
     `When: ${when(trip)}`,
     `Travelers: ${b.traveler_count || 1} (${b.composition || 'not stated'}${b.composition_other ? ': ' + b.composition_other : ''})`,
     `Purpose: ${(b.purpose || []).join(', ') || 'Pure exploration'}${b.purpose_other ? ' / ' + b.purpose_other : ''}`,
@@ -184,6 +209,8 @@ const activeDiet = (t) => (t.diet || []).filter((d) => (d === 'Gluten-free / Cel
 // two, then split into the two research entries the rest of the app expects — this halves
 // Stage 1's fixed cost (one system prompt instead of two) with no change to what's asked.
 function framingPrompt(trip) {
+  const route = routeOf(trip);
+  if (route) return framingPromptMulti(trip, route);
   return `
 Destination: ${trip.destination}. Trip: ${when(trip)}.
 Two things, to frame the rest of the intake:
@@ -206,6 +233,29 @@ Budget: use ranges in local currency. Lodging is per room per night; daily_per_p
 Transport assumes public transport up to 3-star, a mix of private and public at 4-star, and private only at 5-star.`;
 }
 
+// Multi-city version: the same two jobs in ONE call, covering every city, with each sight,
+// neighborhood and day trip tagged with its "city". Fewer sights per city keep it the same size.
+function framingPromptMulti(trip, route) {
+  return `
+Multi-city trip, ${when(trip)}. Route in order: ${route.map((x) => `${x.city} (${x.nights} night${x.nights === 1 ? '' : 's'})`).join(' → ')}.
+Two things, to frame the rest of the intake:
+1) For EACH city, the sights and areas a first-time planner should know about. For each sight, search the web for its
+   own official website (the venue's or site's own page — a ticketing or visiting-info page is fine). Only include
+   official_site if you found it this session and are confident it's the real site; otherwise leave it an empty string.
+2) A general budget snapshot across the route from your knowledge (a live web price check comes later).
+Return JSON:
+{"sights":[{"city":"exactly as written in the route","name":"","why":"one short sentence","time_needed":"","book_ahead":true,"official_site":""}],
+ "neighborhoods":[{"city":"","name":"","character":"one short sentence"}],
+ "day_trips":[{"city":"","name":"","travel_time":""}],
+ "currency":"ISO code travelers will pay in most (mention other currencies in notes)","cost_level":"one sentence comparing how expensive the cities are",
+ "tiers":{"backpacker":{"lodging_night":"","meal":"","daily_per_person":""},
+          "tourist":{...},"three_star":{...},"four_star":{...},"five_star":{...}},
+ "notes":["2–4 short, practical notes, e.g. tourist taxes, tipping, cash vs card, getting between the cities"]}
+Per city: 5–8 sights scaled to the nights there (fewer for short stays), 2–4 neighborhoods, 0–2 day trips. Only well-established, real places.
+Budget: ranges across the route, weighted by nights. Lodging is per room per night; daily_per_person includes lodging share (two sharing), food, activities, local transport.
+Transport assumes public transport up to 3-star, a mix of private and public at 4-star, and private only at 5-star.`;
+}
+
 export async function startFraming(tripId) {
   const trip = await getTrip(tripId);
   if (!trip) return;
@@ -217,7 +267,7 @@ export async function startFraming(tripId) {
   await setResearch(tripId, 'sights', stamp);
   await setResearch(tripId, 'budget', stamp);
   try {
-    const r = await runStep(tripId, 'sights', framingPrompt(trip), { maxTokens: 6000 });
+    const r = await runStep(tripId, 'sights', framingPrompt(trip), { maxTokens: routeOf(trip) ? 6000 + routeOf(trip).length * 2000 : 6000 });
     const sights = (r.sights || []).map((s) => ({ ...s, official_site: normalizeSiteUrl(s.official_site) }));
     await setResearch(tripId, 'sights', { status: 'done', result: { sights, neighborhoods: r.neighborhoods || [], day_trips: r.day_trips || [] } });
     await setResearch(tripId, 'budget', { status: 'done', result: { currency: r.currency || '', cost_level: r.cost_level || '', tiers: r.tiers || {}, notes: r.notes || [] } });
@@ -233,12 +283,18 @@ export async function startFraming(tripId) {
 // commonly on the same booking/review pages anyway — while season/context stays separate
 // since it's a different kind of research. Same four price categories are still collected;
 // this only cuts how many times the system prompt and destination framing get resent.
+// Multi-city pricing: one set of numbers for the whole route, weighted by nights, so the
+// pricing card and daily estimate work exactly as for one city; city-by-city differences go in notes.
+const multiPricingNote = (t) => { const r = routeOf(t); return r ? `
+This is a multi-city trip (${r.map((x) => `${x.city} ${x.nights}n`).join(', ')}). Give ONE set of numbers for the whole route,
+weighted by nights in each city, and put any big city-to-city differences in "notes" (name the city).` : ''; };
 const PRICE_TIERS_JSON = `{"backpacker":{"low":0,"high":0},"tourist":{"low":0,"high":0},"three_star":{"low":0,"high":0},"four_star":{"low":0,"high":0},"five_star":{"low":0,"high":0}}`;
 const pricingPrompts = {
-  price_stay: (t) => `Search the web for CURRENT prices in ${t.destination} for ${when(t)}, covering two categories: lodging and local transport.
+  price_stay: (t) => `Search the web for CURRENT prices in ${placeText(t)} for ${when(t)}, covering two categories: lodging and local transport.${multiPricingNote(t)}
 Return JSON: {"currency":"",
  "hotels":{"per_night_per_room":${PRICE_TIERS_JSON},"examples":[{"tier":"three_star","name":"","price":"","source_url":""}],"notes":[""]},
- "transit":{"transport_per_person_per_day":${PRICE_TIERS_JSON},"key_prices":[{"item":"","price":"","source_url":""}],"notes":[""]},
+ "transit":{"transport_per_person_per_day":${PRICE_TIERS_JSON},"key_prices":[{"item":"","price":"","source_url":""}],"notes":[""]},${routeOf(t) ? `
+ "transfers":[{"from":"","to":"","mode":"e.g. high-speed train, bus, ferry, private transfer (no flights)","duration":"door to door, approx.","price_per_person":"range, local currency","notes":"e.g. book ahead, which station, luggage"}],` : ''}
  "sources":[""]}
 Lodging numbers are per room per night (backpacker = hostels; 5-star = luxury).
 Transport numbers are per person per day, and WHICH KIND of transport depends on the tier:
@@ -246,13 +302,13 @@ Transport numbers are per person per day, and WHICH KIND of transport depends on
 - 4-star: a mix of private and public transport (some trips by public transit, others by taxi, rideshare or a private transfer).
 - 5-star: private transport ONLY (car with driver, private transfers, taxi or rideshare). No public transport.
 Private transport is usually priced per vehicle, so split it between two travelers to keep every number per person. Local currency.`,
-  price_eat_do: (t) => `Search the web for CURRENT prices in ${t.destination} for ${when(t)}, covering two categories: restaurants/food and main attractions/activities${done(t, 'sights') ? ` (key sights: ${done(t, 'sights').sights.slice(0, 8).map((s) => s.name).join(', ')})` : ''}.
+  price_eat_do: (t) => `Search the web for CURRENT prices in ${placeText(t)} for ${when(t)},${multiPricingNote(t)} covering two categories: restaurants/food and main attractions/activities${done(t, 'sights') ? ` (key sights: ${done(t, 'sights').sights.slice(0, 8).map((s) => s.name).join(', ')})` : ''}.
 Return JSON: {"currency":"",
  "food":{"food_per_person_per_day":${PRICE_TIERS_JSON},"typical":{"coffee":"","casual_lunch":"","mid_dinner":"","fine_dinner":""},"notes":[""]},
  "acts":{"activities_per_person_per_day":${PRICE_TIERS_JSON},"key_prices":[{"name":"","price":"","book_ahead":true,"official_site":"","source_url":""}],"free_highlights":[""],"notes":[""]},
  "sources":[""]}
 food_per_person_per_day = three meals for one person at that tier. Local currency.`,
-  price_context: (t) => `Search the web for travel context for ${t.destination} during ${when(t)}: season (peak/shoulder/low), typical weather, crowd levels, holidays, strikes or closures, and major events. Also describe how walkable the city is day to day: terrain, hills, cobblestones, and how much walking a typical visitor should
+  price_context: (t) => `Search the web for travel context for ${placeText(t)} during ${when(t)}${routeOf(t) ? ' (cover each city briefly, naming the city)' : ''}: season (peak/shoulder/low), typical weather, crowd levels, holidays, strikes or closures, and major events. Also describe how walkable the city is day to day: terrain, hills, cobblestones, and how much walking a typical visitor should
 expect. End that description with one short, matter-of-fact sentence recommending that travelers with specific accessibility
 needs check with local accessibility organizations or the transit authority before they go. State it as ordinary, practical
 advice — never as an apology, and never say the data here is incomplete or unavailable.
@@ -267,7 +323,7 @@ export async function runPricing(trip) {
   results.forEach((r, i) => {
     const k = keys[i];
     if (r.status !== 'fulfilled') { out.failed.push(PRICING_FAIL_LABEL[k]); return; }
-    if (k === 'price_stay') { out.hotels = r.value.hotels; out.transit = r.value.transit; out.currency = out.currency || r.value.currency; }
+    if (k === 'price_stay') { out.hotels = r.value.hotels; out.transit = r.value.transit; out.currency = out.currency || r.value.currency; if (Array.isArray(r.value.transfers)) out.transfers = r.value.transfers; }
     else if (k === 'price_eat_do') { out.food = r.value.food; out.acts = r.value.acts; out.currency = out.currency || r.value.currency; }
     else if (k === 'price_context') { out.context = r.value; }
   });
@@ -341,7 +397,7 @@ Group must-do categories: ${(g.must_do_cats || []).join(', ') || 'none chosen'}
 Group must-avoid: ${(g.must_avoid_cats || []).join(', ') || 'none'}
 ${g.been_before === 'before' && g.bb_missed ? `Missed last time: ${g.bb_missed}` : ''}
 ${sights ? `Known sights: ${sights.sights.map((s) => s.name).join(', ')}` : ''}
-Suggest 10 destination-specific must-do experiences as short tiles (max 6 words each), mixing icons with
+Suggest ${routeOf(trip) ? `12 must-do experiences spread across the cities on the route, roughly in proportion to the nights in each, as short tiles (max 6 words each, ending with the city in parentheses, e.g. "Uffizi Gallery (Florence)")` : '10 destination-specific must-do experiences as short tiles (max 6 words each)'}, mixing icons with
 authentic local experiences that fit this group. Avoid anything in the must-avoid list.
 Labels are plain names: name the place or experience without timing or transport add-ons (write "Colosseum", not "Colosseum at opening";
 "Appian Way", not "Appian Way by bike"; "Pantheon", not "Pantheon at night").
@@ -394,8 +450,8 @@ Certified accommodations required: ${trip.group_answers?.certified === 'yes' ? '
 Travelers with dietary needs (apply each restriction ONLY to that person, never to the whole group):
 ${dietPeople.map((t) => { const diet = activeDiet(t); return `- ${t.name}: ${[...diet, t.diet_other].filter(Boolean).join(', ')}${diet.includes('Gluten-free / Celiac') && t.gluten_level ? ` (gluten: ${t.gluten_level})` : ''}`; }).join('\n')}
 
-Search the web for restaurants in ${trip.destination} that can SAFELY serve these needs, spread across the
-areas the group is likely to visit and matching the budget tier. For allergies and celiac, prefer places with
+Search the web for restaurants in ${placeText(trip)} that can SAFELY serve these needs, spread across the
+areas the group is likely to visit${routeOf(trip) ? ' in EVERY city on the route (put the city in "area")' : ''} and matching the budget tier. For allergies and celiac, prefer places with
 explicit evidence (certification, dedicated menu, strong specific reviews). Include only restaurants you found
 evidence for this session.
 Also write a short allergy/diet card in the local language(s) that travelers can show to staff.
@@ -456,11 +512,14 @@ const mapsUrl = (q, dest) =>
 // Airbnb's real search-page format: /s/<place, with each part joined by -->/homes, with the
 // stay dates as query params when known. Built from the trip, never guessed by the model, so it
 // always lands on a live, correctly filtered page instead of a made-up or generic one.
-function airbnbSearchUrl(trip) {
-  const slug = (trip.destination || '').split(',').map((s) => s.trim().replace(/\s+/g, '-')).filter(Boolean).join('--');
+function airbnbSearchUrl(trip, stop = null) {
+  const place = stop?.city || routeOf(trip)?.[0]?.city || trip.destination || '';
+  const slug = place.split(',').map((s) => s.trim().replace(/\s+/g, '-')).filter(Boolean).join('--');
   const params = new URLSearchParams();
-  if (trip.start_date) params.set('checkin', trip.start_date);
-  if (trip.end_date) params.set('checkout', trip.end_date);
+  const checkin = stop ? stop.arrive : trip.start_date;
+  const checkout = stop ? stop.leave : trip.end_date;
+  if (checkin) params.set('checkin', checkin);
+  if (checkout) params.set('checkout', checkout);
   const qs = params.toString();
   return `https://www.airbnb.com/s/${encodeURIComponent(slug)}/homes${qs ? `?${qs}` : ''}`;
 }
@@ -479,9 +538,23 @@ export async function runGenerate(trip) {
     return `- ${c.summary} → ORGANIZER DECIDED: ${ch?.choice || c.suggested}${ch?.note ? ` (${ch.note})` : ''}. ${c.options?.[ch?.choice || c.suggested] || ''}`;
   });
   const dropped = review.removed_mustdos || [];
+  const route = routeOf(trip);
+  const transfers = r.pricing?.result?.transfers;
+  const routeRules = route ? `
+MULTI-CITY ROUTE (follow exactly, in this order):
+${route.map((x, i) => `${i + 1}. ${x.city}: ${x.nights} night${x.nights === 1 ? '' : 's'}, arrive day ${x.arrive_day}${x.arrive ? ` (${x.arrive})` : ''}, leave day ${x.leave_day}${x.leave ? ` (${x.leave})` : ''}`).join('\n')}
+- Every day object gets "city": the city you sleep in that night (the last day: the city you leave from).
+- On each moving day (the day you leave one city for the next), include a "Travel to <next city>" block at a sensible
+  time, with "transport": {"mode": suggested mode — train, bus, ferry, or private transfer at 5-Star; NEVER a flight,
+  "why", "research_note": approximate door-to-door time and cost per person, which station/port, and whether to book
+  ahead}. Leave time for check-out and check-in; keep the rest of a moving day light.
+${transfers?.length ? `- Researched transfers (use these): ${JSON.stringify(stripUrls(transfers))}` : ''}
+- "stay": 2–3 options PER CITY (each with "city"), in route order.
+- Keep each day's sights, meals and options in that day's city (day trips are fine if clearly marked).
+` : '';
 
   const prompt = `
-Build a ${days}-day itinerary.
+Build a ${days}-day itinerary${route ? ` across ${route.length} cities` : ''}.
 
 TRIP
 ${basicsText(trip)}
@@ -500,7 +573,7 @@ Dietary research: ${JSON.stringify(needsForPrompt(done(trip, 'needs'))?.diet || 
 Must-do check: ${JSON.stringify(check?.must_dos || [])}
 ${dropped.length ? `Organizer removed these must-dos: ${dropped.join(', ')}` : ''}
 ${decisions.length ? `ORGANIZER DECISIONS ON CONFLICTS (follow exactly):\n${decisions.join('\n')}` : 'No unresolved conflicts.'}
-
+${routeRules}
 RULES
 - JOINT itinerary by default. Where preferences differ and it's feasible, offer side-by-side options in the
   SAME time slot using "split" (e.g. one person at the museum, the rest at the market). Only create a split the
@@ -528,8 +601,8 @@ RULES
 
 Return JSON only:
 {"title":"","summary":"2–3 sentences",
- "stay":[{"name":"","area":"","why":"","price_level":"","place_query":"","booking_url":"","booking_source":"","loyalty_note":""}],
- "days":[{"day":1,"date":"YYYY-MM-DD or null","title":"short theme","areas":["",""],
+ "stay":[{${route ? '"city":"",' : ''}"name":"","area":"","why":"","price_level":"","place_query":"","booking_url":"","booking_source":"","loyalty_note":""}],
+ "days":[{"day":1,"date":"YYYY-MM-DD or null",${route ? '"city":"",' : ''}"title":"short theme","areas":["",""],
    "blocks":[{"time":"8:30–12:30","title":"","description":"","tags":["Timed entry required","Walk-in","Book ahead","Step-free","Quiet option","Rest time"],
      "who":"Everyone",
      "transport":{"mode":"","why":"","research_note":""},
@@ -552,15 +625,20 @@ Omit "split" and "transport" when not needed. Use empty strings rather than inve
   const itin = await runStep(trip.id, 'generate', prompt, { maxTokens });
 
   // ── Code step: Google Maps links + verification tiers ──
+  // Multi-city: each option is placed in its own city (the stay's "city", or the day's), so map
+  // searches, Wander Map matches and Airbnb searches look in the right place, not the whole route.
+  const stopFor = (city) => route && route.find((x) => x.city.toLowerCase() === String(city || '').toLowerCase())
+    || route?.find((x) => String(city || '').toLowerCase().includes(x.city.split(',')[0].trim().toLowerCase()));
+  const placeOf = (city) => (route ? (stopFor(city)?.city || city || route[0].city) : trip.destination);
   const everyOption = [];
-  (itin.stay || []).forEach((o) => everyOption.push({ o, category: 'lodging' }));
+  (itin.stay || []).forEach((o) => everyOption.push({ o, category: 'lodging', place: placeOf(o.city) }));
   (itin.days || []).forEach((d) => (d.blocks || []).forEach((b) => {
-    (b.options || []).forEach((o) => everyOption.push({ o, category: 'activity' }));
-    (b.split || []).forEach((s) => (s.options || []).forEach((o) => everyOption.push({ o, category: 'activity' })));
+    (b.options || []).forEach((o) => everyOption.push({ o, category: 'activity', place: placeOf(d.city) }));
+    (b.split || []).forEach((s) => (s.options || []).forEach((o) => everyOption.push({ o, category: 'activity', place: placeOf(d.city) })));
   }));
-  for (const { o, category } of everyOption) {
-    o.maps_url = mapsUrl(o.place_query || o.name, trip.destination);
-    Object.assign(o, assignTier(o.name, trip.destination));
+  for (const { o, category, place } of everyOption) {
+    o.maps_url = mapsUrl(o.place_query || o.name, place);
+    Object.assign(o, assignTier(o.name, place));
     // Claude sometimes names Airbnb as the right place to book a lodging suggestion but can't
     // point to one real listing (because the suggestion is a type of place, not a specific one it
     // verified exists) and falls back to airbnb.com's bare homepage — a real, reachable link that
@@ -569,7 +647,7 @@ Omit "split" and "transport" when not needed. Use empty strings rather than inve
     // filtered to the destination and these dates, which is more useful than either the homepage
     // or an invented listing URL that may not exist or stay live.
     if (category === 'lodging' && /airbnb\.[a-z.]+/i.test(o.booking_url || '') && !/\/rooms\//i.test(o.booking_url)) {
-      o.booking_url = airbnbSearchUrl(trip);
+      o.booking_url = airbnbSearchUrl(trip, route ? stopFor(o.city) : null);
       o.booking_source = 'Airbnb (search for this area and your dates)';
     }
   }
